@@ -13,9 +13,9 @@ from std_msgs.msg import Bool, Int32
 
 from arm_control import DualArmTask
 from arm_control import ArmTask, SuctionTask, Command, Status, RobotiqGripper
-# from obj_info import ObjInfo
-from get_image_info import GetObjInfo
 
+from obj_info import ObjInfo
+from get_image_info import GetObjInfo
 
 '''
 Plum Riceball:      ABCD (10~, 20~, 30~, 40~)   (5 sides)
@@ -26,13 +26,13 @@ Drink:              OPQ  (150~, 160~, 170~)     (4 sides)??
 Lunchbox:           RST  (180~, 190~, 200~)     (2 side)
 '''
 #camera_pose: pos, euler #, phi??
-cam_pose = {'left' :[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                    [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                    [[0.38,  0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
+cam_pose = {'left' :[[[0.28,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                    [[0.28,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                    [[0.28,  0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
 
-          'right':[[[0.38, -0.2, 0.15],  [0.0, 65, 0.0]],       #shelf level 1
-                    [[0.38, -0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                    [[0.38, -0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
+          'right':[[[0.28, -0.2, 0.15],  [0.0, 65, 0.0]],       #shelf level 1
+                    [[0.28, -0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                    [[0.28, -0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
 
           'left_indx' : 0,                                      #_index: current shelf level 
           'right_indx' : 0}
@@ -60,20 +60,6 @@ cam_pose = {'left' :[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
 #             [[0.545,  0.1, -0.43], [0, 90,  0]]],
 #             [[[0.6, -0.2, -0.883], [0, 90,  0]],
 #             [[0.6,  0.2, -0.883], [0, 90, 0]]]]
-
-class ObjInfo(dict):
-    def __init__(self):
-        self.side_id_name = ['front', 'back', 'left_side', 'right_side', 'bottom', 'side_id5', 'side_id6', 'side_id7', 'side_id8', 'side_id9']
-
-        self['id']      = 10
-        self['side_id'] = ''                # 'front', 'back', 'left_side', 'right_side', 'bottom'
-        self['name']    = 'plum_riceball'   # 'plum_riceball', 'salmon_riceball', 'sandwich', 'burger', 'drink', 'lunch_box'
-        self['letter'] = 'A'                # ABCD, EFGH, IJK, LMN, OPQ, RST
-        self['expired']   = 'new'             # 'new', 'old', 'expired'
-
-        self['pos']     = None              # position (x, y, z)
-        self['euler']   = None              # rotation
-        self['sucang']  =  0                # sucker angle?
 
 class State(IntEnum):
     init            = 0 #(o)
@@ -136,6 +122,18 @@ class MerchandiseTask():
         if ids is None:
             return
         for id, base_H_mrk, name, exp, side_id in zip(ids, base_H_mrks, names, exps, side_ids):
+            
+            num = int(id/10)-1
+            self.curr_merchandise_list[num]['id'] = id
+            self.curr_merchandise_list[num]['side_id'] = side_id
+            
+            self.curr_merchandise_list[num]['pos'] = base_H_mrk[0:3, 3]
+            self.curr_merchandise_list[num]['vector'] = base_H_mrk[0:3, 2]                  
+            self.curr_merchandise_list[num]['sucang'], roll = self.dual_arm.suc2vector(base_H_mrk[0:3, 2], [0, 1.57, 0])
+            self.curr_merchandise_list[num]['euler'] = [roll, 90, 0]      
+
+            self.camera.print_merchandise_log(self.curr_merchandise_list)
+
 
             obj = ObjInfo()
             obj['id'] = id

@@ -7,27 +7,8 @@ import cv2
 from math import sin, cos, radians
 
 from strategy.srv import aruco_info, aruco_infoResponse
-# from obj_info import ObjInfo
+from obj_info import ObjInfo
 
-class ObjInfo():    
-
-    def __init__(self, pre_id, id, name, letter, state):
-        self.pre_id = pre_id    # predefined aruco ID
-        self.id = id            # current detected aruco ID
-        self.name = name        # 'plum_riceball', 'salmon_riceball', 'sandwich', 'burger', 'drink', 'lunch_box'
-        self.letter = letter    # ABCD, EFGH, IJK, LMN, OPQ, RST
-        self.state = state      # 'new', 'old', 'expired'
-        
-        #changable due to object pose                
-        self.side_id = ''       # 'front', 'back', 'left_side', 'right_side', 'bottom'
-        self.pose = None
-        self.euler = None
-        self.cam_H_mrk = None
-        self.suc_ang = None
-
-        # self['expired']
-        # self['vector']
- 
 class GetObjInfo():
     def __init__(self):
         self.folder = '/home/upup/ws_dual_wrs_up/src/timda_dual_arm/strategy/scripts/'
@@ -115,17 +96,21 @@ class GetObjInfo():
         for type_idx in range(len(self.merchandise_types)):
 
             for num in range(self.merchandise_quantity[type_idx]):
-                pre_id = id*10
-                curr_id = pre_id
+                pre_id = id*10                
                 letter = chr(64 + id)
                 if letter in self.merchandise_letters_expired:
-                    status = self.merchandise_status[2]  #'expired'
+                    expire_state = self.merchandise_status[2]  #'expired'
                 elif letter in self.merchandise_letters_new:
-                    status = self.merchandise_status[0]  #'new'
+                    expire_state = self.merchandise_status[0]  #'new'
                 else:
-                    status = self.merchandise_status[1]  #'old'
- 
-                self.merchandise_list.append(ObjInfo(pre_id, curr_id, self.merchandise_types[type_idx], letter, status))
+                    expire_state = self.merchandise_status[1]  #'old'
+
+                obj = ObjInfo()
+                obj['pre_id']  = pre_id                            # predefined aruco ID range(i.e. 10~19)
+                obj['name']    = self.merchandise_types[type_idx]  # 'plum_riceball', 'salmon_riceball', 'sandwich', 'burger', 'drink', 'lunch_box'
+                obj['letter'] = letter                             # ABCD, EFGH, IJK, LMN, OPQ, RST
+                obj['expired']   = expire_state                    # 'new', 'old', 'expired'
+                self.merchandise_list.append(obj)
 
                 id +=1
 
@@ -133,9 +118,9 @@ class GetObjInfo():
 
     def print_merchandise_log(self, merchandise_list):
         print('\n*=====================================*')
-        print('{:^10} {:^20} {:^8} {:^10} {:^10} {:^12}'.format('pre_id', 'merchandise name', 'letter', 'state', 'id', 'side_id')) #, pose, euler, cam_H_mrk, suc_ang:')
+        print('{:^10} {:^20} {:^8} {:^10} {:^10} {:^12}'.format('pre_id', 'merchandise name', 'letter', 'expired', 'id', 'side_id'))
         for obj in merchandise_list:
-            print('{:^10} {:^20} {:^8} {:^10} {:^10} {:^12}'.format(obj.pre_id, obj.name, obj.letter, obj.state, obj.id, obj.side_id)) #, obj.pose, obj.euler, obj.cam_H_mrk, obj.suc_ang)
+            print('{:^10} {:^20} {:^8} {:^10} {:^10} {:^12}'.format(obj['pre_id'], obj['name'], obj['letter'], obj['expired'], obj['id'], obj['side_id']))
         print('*=====================================*\n')
 
     def get_merchandise_log(self):
@@ -188,11 +173,11 @@ class GetObjInfo():
                 base_H_mrks = np.append(base_H_mrks, base_H_mrk) #np.mat
                 
                 num = int(id/10)-1                
-                self.merchandise_list[num].id = id
-                self.merchandise_list[num].side_id = side_id
-                self.merchandise_list[num].pose = base_H_mrk[0:3, 3]
-                self.merchandise_list[num].euler = base_H_mrk[0:3, 2]
-                self.merchandise_list[num].cam_H_mrk = cam_H_mrk
+                self.merchandise_list[num]['id'] = id
+                self.merchandise_list[num]['side_id'] = side_id
+                self.merchandise_list[num]['pose'] = base_H_mrk[0:3, 3]
+                self.merchandise_list[num]['euler'] = base_H_mrk[0:3, 2]
+                self.merchandise_list[num]['cam_H_mrk'] = cam_H_mrk
 
         base_H_mrks = base_H_mrks.reshape(int(len(base_H_mrks)/16), 4, 4)
         # self.filter_obj(self.ids, base_H_mrks, names, exps, side_ids)        
@@ -200,30 +185,30 @@ class GetObjInfo():
 
         return self.ids, base_H_mrks, names, exps, side_ids
 
-    def filter_out_same_obj(self, ids, base_H_mrks, names, status):
-        pass
+    # def filter_out_same_obj(self, ids, base_H_mrks, names, status):
+    #     pass
 
-    #make sure same object
-    def filter_obj(self, ids, obj_mat, names, exps, side_ids):
-        for i in range(len(ids)-1):
-            if names[i] == names[i+1] and exps[i] == exps[i+1]:
-                if np.linalg.norm(np.subtract(obj_mat[i, 0:3, 3], obj_mat[i+1, 0:3, 3])) < 0.05:
-                    if side_ids[i] == 0:
-                        ids[i+1] = -1
-                    elif side_ids[i+1] == 0:
-                        ids[i] = -1
-                    elif side_ids[i] == 1:
-                        ids[i] = -1
-                    elif side_ids[i+1] == 1:
-                        ids[i+1] = -1
-                    else:
-                        ids[i] = -1
-                    if ids[i+1] == -1:
-                        ids[i], ids[i+1] = ids[i+1], ids[i]
-                        names[i], names[i+1] = names[i+1], names[i]
-                        exps[i], exps[i+1] = exps[i+1], exps[i]
-                        side_ids[i], side_ids[i+1] = side_ids[i+1], side_ids[i]
-                        obj_mat[i], obj_mat[i+1] = obj_mat[i+1], obj_mat[i]
+    # #make sure same object
+    # def filter_obj(self, ids, obj_mat, names, exps, side_ids):
+    #     for i in range(len(ids)-1):
+    #         if names[i] == names[i+1] and exps[i] == exps[i+1]:
+    #             if np.linalg.norm(np.subtract(obj_mat[i, 0:3, 3], obj_mat[i+1, 0:3, 3])) < 0.05:
+    #                 if side_ids[i] == 0:
+    #                     ids[i+1] = -1
+    #                 elif side_ids[i+1] == 0:
+    #                     ids[i] = -1
+    #                 elif side_ids[i] == 1:
+    #                     ids[i] = -1
+    #                 elif side_ids[i+1] == 1:
+    #                     ids[i+1] = -1
+    #                 else:
+    #                     ids[i] = -1
+    #                 if ids[i+1] == -1:
+    #                     ids[i], ids[i+1] = ids[i+1], ids[i]
+    #                     names[i], names[i+1] = names[i+1], names[i]
+    #                     exps[i], exps[i+1] = exps[i+1], exps[i]
+    #                     side_ids[i], side_ids[i+1] = side_ids[i+1], side_ids[i]
+    #                     obj_mat[i], obj_mat[i+1] = obj_mat[i+1], obj_mat[i]
     
     def convert_rvec_matrix(self, rot_form1):
         
@@ -248,22 +233,22 @@ class GetObjInfo():
         
         tot = len(self.merchandise_list)       
         
-        first_obj_id_min = self.merchandise_list[0].pre_id 
-        last_obj_id_max = self.merchandise_list[tot-1].pre_id + 10
+        first_obj_id_min = self.merchandise_list[0]['pre_id']
+        last_obj_id_max = self.merchandise_list[tot-1]['pre_id'] + 10
                 
         if((id >= last_obj_id_max) or (id < first_obj_id_min)): #outside predefined aruco id            
             # print('ERRRROR!!! id, name, exp_state, side_id: {}, {}, {}, {}'.format(id, 'ERROR', 'expired', 'ERROR'))
             return 'ERROR', 'expired', self.merchandise_side_id_name[id % 10]
         
         for num in range(0, tot):
-            obj_id_min = self.merchandise_list[num].pre_id
+            obj_id_min = self.merchandise_list[num]['pre_id']
             obj_id_max = obj_id_min + 10
 
             if ((id >= obj_id_min) and (id < obj_id_max)):
-                self.merchandise_list[num].side_id = self.merchandise_side_id_name[id % 10] #self.merchandise_side_id_name[int(id - obj_id_min)]
+                self.merchandise_list[num]['side_id'] = self.merchandise_side_id_name[id % 10] #self.merchandise_side_id_name[int(id - obj_id_min)]
                 # print('id, name, exp_state, side_id: {}, {}, {}, {}'.format( \
                 #     id, self.merchandise_list[num].name, self.merchandise_list[num].state, self.merchandise_list[num].side_id))
-                return self.merchandise_list[num].name, self.merchandise_list[num].state, self.merchandise_list[num].side_id
+                return self.merchandise_list[num]['name'], self.merchandise_list[num]['expired'], self.merchandise_list[num]['side_id']
 
 
     def calculate_mrk2base(self, cam_H_mrk, flange_H_cam, base_H_flange):  #visiontoArm

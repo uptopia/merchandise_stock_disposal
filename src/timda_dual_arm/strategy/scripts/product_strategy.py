@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-#import queue
 import Queue as queue
 # from Queue import Queue
 import copy
@@ -26,13 +25,13 @@ Drink:              OPQ  (150~, 160~, 170~)     (4 sides)??
 Lunchbox:           RST  (180~, 190~, 200~)     (2 side)
 '''
 #camera_pose: pos, euler #, phi??
-cam_pose = {'left' :[[[0.28,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                    [[0.28,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                    [[0.28,  0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
+cam_pose = {'left' :[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                    [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                    [[0.38,  0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
 
-          'right':[[[0.28, -0.2, 0.15],  [0.0, 65, 0.0]],       #shelf level 1
-                    [[0.28, -0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                    [[0.28, -0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
+          'right':[[[0.38, -0.2, 0.15],  [0.0, 65, 0.0]],       #shelf level 1
+                    [[0.38, -0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                    [[0.38, -0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
 
           'left_indx' : 0,                                      #_index: current shelf level 
           'right_indx' : 0}
@@ -63,14 +62,13 @@ cam_pose = {'left' :[[[0.28,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
 
 class State(IntEnum):
     init            = 0 #(o)
-    get_obj_inf     = 1 #(o)#take_pic + get_obj_info
-    select_obj      = 2 #(?)
+    move2cam_pose    = 1 #(o)    #take_pic + get_obj_info
+    detect_obj      = 2 #(?)
     move2obj        = 3
     check_pose      = 4
     pick            = 5
     place           = 6
     finish          = 7
-
 
 class MerchandiseTask():
     def __init__(self, name_arm_ctrl, en_sim_arm_ctrl):
@@ -86,27 +84,26 @@ class MerchandiseTask():
         self.camera = GetObjInfo()
         self.curr_merchandise_list = []
         
-        # # self.place_pose_queue = queue.Queue()
+        # self.place_pose_queue = queue.Queue()
 
         self.object_queue = queue.Queue()   #object detected from both camera
         
         self.left_tar_obj = queue.Queue()
         self.right_tar_obj = queue.Queue()
 
-        # # self.left_retry_obj = queue.Queue()
-        # # self.right_retry_obj = queue.Queue()
+        # self.left_retry_obj = queue.Queue()
+        # self.right_retry_obj = queue.Queue()
 
         self.target_obj_queue = {'left' : self.left_tar_obj, 'right' : self.right_tar_obj}
         self.target_obj = {'left': None, 'right': None}
 
-        # # self.retry_obj_queue = {'left': self.left_retry_obj, 'right': self.right_retry_obj}
+        # self.retry_obj_queue = {'left': self.left_retry_obj, 'right': self.right_retry_obj}
         
-        # # self.obj_done = np.zeros((100), dtype=bool)
-        # # self.obj_retry = np.zeros((100), dtype=bool)
+        # self.obj_done = np.zeros((100), dtype=bool)
+        # self.obj_retry = np.zeros((100), dtype=bool)
         self.next_level = {'left': False, 'right': False}  #go_to_next_level?
 
-    #     self.init()
-            
+    #     self.init()            
     
     # def init(self):
     #     for pose in place_pose:
@@ -128,32 +125,19 @@ class MerchandiseTask():
             self.curr_merchandise_list[num]['side_id'] = side_id
             
             self.curr_merchandise_list[num]['pos'] = base_H_mrk[0:3, 3]
-            self.curr_merchandise_list[num]['vector'] = base_H_mrk[0:3, 2]                  
-            self.curr_merchandise_list[num]['sucang'], roll = self.dual_arm.suc2vector(base_H_mrk[0:3, 2], [0, 1.57, 0])
+            self.curr_merchandise_list[num]['vector'] = base_H_mrk[0:3, 2]  #aruco_z_axis, rotation (coordinate_axis: aruco z axis)
+            self.curr_merchandise_list[num]['sucang'], roll = self.dual_arm.suc2vector(base_H_mrk[0:3, 2], [0, 1.57, 0])    #TODO #suck ang(0-90), roll (7 axi)
             self.curr_merchandise_list[num]['euler'] = [roll, 90, 0]      
 
             self.camera.print_merchandise_log(self.curr_merchandise_list)
 
-
-            obj = ObjInfo()
-            obj['id'] = id
-            obj['side_id'] = side_id
-
-            obj['name'] = name
-            obj['expired'] = exp
-            
-            obj['pos'] = base_H_mrk[0:3, 3]            
-            obj['vector'] = base_H_mrk[0:3, 2] #aruco_z_axis, rotation (coordinate_axis: aruco z axis)
-            obj['sucang'], roll = self.dual_arm.suc2vector(base_H_mrk[0:3, 2], [0, 1.57, 0])#TODO:[0, 1.57, 0]) #suck ang(0-90), roll (7 axi)
-            obj['euler']   = [roll, 90, 0]
-
             #Check Arm approach from [TOP] or [DOWN]: aruco_z_axis's [z value]
-            if obj['vector'][2] >= -0.2:  #TODO aruco_z_axis's [z value]>=, >???
+            if self.curr_merchandise_list[num]['vector'][2] >= -0.2:  #TODO aruco_z_axis's [z value]>=, >???
                 #Arm approach from top => GOOD to go!!!                
-                self.object_queue.put(obj)
-                print('Good!!! object put in queue; name: {}, id: {}'.format(obj['name'], obj['id']))                
+                self.object_queue.put(self.curr_merchandise_list[num])
+                print('Good!!! object put in queue; name: {}, id: {}'.format(self.curr_merchandise_list[num]['name'], self.curr_merchandise_list[num]['id']))                
             else:                
-                print('ERROR!!! Arm approach from downside => BAD, aruco_z_axis: {}'.format(obj['vector']))
+                print('ERROR!!! Arm approach from downside => BAD, aruco_z_axis: {}'.format(self.curr_merchandise_list[num]['vector']))
 
     def check_pose(self, arm_side):
         self.target_obj[arm_side] = self.target_obj_queue[arm_side].get()
@@ -178,18 +162,18 @@ class MerchandiseTask():
             arm_state = State.init
 
         elif arm_state == State.init:
-            arm_state = State.get_obj_inf
+            arm_state = State.move2cam_pose
 
-        elif arm_state == State.get_obj_inf:
-            arm_state = State.select_obj
+        elif arm_state == State.move2cam_pose:
+            arm_state = State.detect_obj
 
-        elif arm_state == State.select_obj:
+        elif arm_state == State.detect_obj:
             if self.object_queue.empty():
                 print('camera at shelf level #{}'.format(cam_pose[arm_side+'_indx']))
                 if cam_pose[arm_side+'_indx'] >= 3:                    
                     arm_state = State.finish
                 else:                    
-                    arm_state = State.get_obj_inf                    
+                    arm_state = State.move2cam_pose                    
             else:
                 arm_state = State.move2obj                
         
@@ -212,7 +196,7 @@ class MerchandiseTask():
                 if cam_pose[arm_side+'_indx'] >= 3:
                     arm_state = State.finish
                 else:
-                    arm_state = State.get_obj_inf   #move to next level shelf to take picture
+                    arm_state = State.move2cam_pose   #move to next level shelf to take picture
             else:
                 # if self.obj_retry[self.target_obj[arm_side]['id']] == False:
                 #     self.retry_obj_queue[arm_side].put(self.target_obj[arm_side])
@@ -225,7 +209,7 @@ class MerchandiseTask():
                 if cam_pose[arm_side+'_indx'] >= 3:
                     arm_state = State.finish
                 else:
-                    arm_state = State.get_obj_inf   #move to next level shelf to take picture
+                    arm_state = State.move2cam_pose   #move to next level shelf to take picture
             else:
                 arm_state = State.move2obj
 
@@ -244,7 +228,7 @@ class MerchandiseTask():
         if arm_state == State.init:
             print(' ++++++++++ init ++++++++++ ', arm_side)
             cmd['cmd'] = 'jointMove'            
-            cmd['jpos'] = [0, 0, -1.2, 0, 1.87, 0, -0.87, 0]#[0, 0, 0, 0, 0, 0, 0, 0]#[-50, 0, -1.2, 0, 1.87, 0, -0.87, 0] #[0, 0, 0, 0, 0, 0, 0, 0]
+            cmd['jpos'] = [0, 0, -1.2, 0, 1.87, 0, -0.87, 0] #[0, 0, 0, 0, 0, 0, 0, 0]
             cmd['state'] = State.init
             cmd['speed'] = 100
             cmd_queue.put(copy.deepcopy(cmd))
@@ -252,8 +236,8 @@ class MerchandiseTask():
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:',self.dual_arm.right_arm.status)
 
-        elif arm_state == State.get_obj_inf:
-            print(' ++++++++++ get_obj_inf ++++++++++ ', arm_side)            
+        elif arm_state == State.move2cam_pose:
+            print(' ++++++++++ move2cam_pose ++++++++++ ', arm_side)            
             print('camera_pose: \n\tarm_side = {}; \n\tpos, euler, phi = {}, {}, {}'.format( 
                 arm_side+'_indx', 
                 cam_pose[arm_side][cam_pose[arm_side+'_indx']][0],
@@ -265,7 +249,7 @@ class MerchandiseTask():
             cmd_queue.put(copy.deepcopy(cmd))
             
             cmd['cmd'] = 'occupied'
-            cmd['state'] = State.get_obj_inf
+            cmd['state'] = State.move2cam_pose
             cmd_queue.put(copy.deepcopy(cmd))
             arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
 
@@ -277,13 +261,12 @@ class MerchandiseTask():
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:',self.dual_arm.right_arm.status)
 
-        elif arm_state == State.select_obj:
-            print(' ++++++++++ select_obj ++++++++++ ', arm_side)
-            self.get_obj_info(arm_side)
-            # self.arrange_obj(side)
+        elif arm_state == State.detect_obj:
+            print(' ++++++++++ detect_obj ++++++++++ ', arm_side)
+            self.get_obj_info(arm_side)            
 
             cmd['cmd'] = None
-            cmd['state'] = State.select_obj
+            cmd['state'] = State.detect_obj
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)

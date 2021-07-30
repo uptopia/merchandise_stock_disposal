@@ -179,36 +179,10 @@ class GetObjInfo():
                 self.merchandise_list[num]['euler'] = base_H_mrk[0:3, 2]
                 self.merchandise_list[num]['cam_H_mrk'] = cam_H_mrk
 
-        base_H_mrks = base_H_mrks.reshape(int(len(base_H_mrks)/16), 4, 4)
-        # self.filter_obj(self.ids, base_H_mrks, names, exps, side_ids)        
+        base_H_mrks = base_H_mrks.reshape(int(len(base_H_mrks)/16), 4, 4)    
         # self.print_merchandise_log(self.merchandise_list)       
 
         return self.ids, base_H_mrks, names, exps, side_ids
-
-    # def filter_out_same_obj(self, ids, base_H_mrks, names, status):
-    #     pass
-
-    # #make sure same object
-    # def filter_obj(self, ids, obj_mat, names, exps, side_ids):
-    #     for i in range(len(ids)-1):
-    #         if names[i] == names[i+1] and exps[i] == exps[i+1]:
-    #             if np.linalg.norm(np.subtract(obj_mat[i, 0:3, 3], obj_mat[i+1, 0:3, 3])) < 0.05:
-    #                 if side_ids[i] == 0:
-    #                     ids[i+1] = -1
-    #                 elif side_ids[i+1] == 0:
-    #                     ids[i] = -1
-    #                 elif side_ids[i] == 1:
-    #                     ids[i] = -1
-    #                 elif side_ids[i+1] == 1:
-    #                     ids[i+1] = -1
-    #                 else:
-    #                     ids[i] = -1
-    #                 if ids[i+1] == -1:
-    #                     ids[i], ids[i+1] = ids[i+1], ids[i]
-    #                     names[i], names[i+1] = names[i+1], names[i]
-    #                     exps[i], exps[i+1] = exps[i+1], exps[i]
-    #                     side_ids[i], side_ids[i+1] = side_ids[i+1], side_ids[i]
-    #                     obj_mat[i], obj_mat[i+1] = obj_mat[i+1], obj_mat[i]
     
     def convert_rvec_matrix(self, rot_form1):
         
@@ -249,7 +223,6 @@ class GetObjInfo():
                 # print('id, name, exp_state, side_id: {}, {}, {}, {}'.format( \
                 #     id, self.merchandise_list[num].name, self.merchandise_list[num].state, self.merchandise_list[num].side_id))
                 return self.merchandise_list[num]['name'], self.merchandise_list[num]['expired'], self.merchandise_list[num]['side_id']
-
 
     def calculate_mrk2base(self, cam_H_mrk, flange_H_cam, base_H_flange):  #visiontoArm
 

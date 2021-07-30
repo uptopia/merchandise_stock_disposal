@@ -7,11 +7,13 @@ import cv2
 from math import sin, cos, radians
 
 from strategy.srv import aruco_info, aruco_infoResponse
+# from obj_info import ObjInfo
 
 class ObjInfo():    
 
-    def __init__(self, id, name, letter, state):         
-        self.id = id            # 10 ~ 200
+    def __init__(self, pre_id, id, name, letter, state):
+        self.pre_id = pre_id    # predefined aruco ID
+        self.id = id            # current detected aruco ID
         self.name = name        # 'plum_riceball', 'salmon_riceball', 'sandwich', 'burger', 'drink', 'lunch_box'
         self.letter = letter    # ABCD, EFGH, IJK, LMN, OPQ, RST
         self.state = state      # 'new', 'old', 'expired'
@@ -113,7 +115,8 @@ class GetObjInfo():
         for type_idx in range(len(self.merchandise_types)):
 
             for num in range(self.merchandise_quantity[type_idx]):
-                aruco_id = id*10
+                pre_id = id*10
+                curr_id = pre_id
                 letter = chr(64 + id)
                 if letter in self.merchandise_letters_expired:
                     status = self.merchandise_status[2]  #'expired'
@@ -121,8 +124,8 @@ class GetObjInfo():
                     status = self.merchandise_status[0]  #'new'
                 else:
                     status = self.merchandise_status[1]  #'old'
-
-                self.merchandise_list.append(ObjInfo(aruco_id, self.merchandise_types[type_idx], letter, status))
+ 
+                self.merchandise_list.append(ObjInfo(pre_id, curr_id, self.merchandise_types[type_idx], letter, status))
 
                 id +=1
 
@@ -130,9 +133,9 @@ class GetObjInfo():
 
     def print_merchandise_log(self, merchandise_list):
         print('\n*=====================================*')
-        print('{:^10}  {:^20}  {:^8} {:^10} {:^12}'.format('aruco_id', 'merchandise name', 'letter', 'state', 'side_id')) #, pose, euler, cam_H_mrk, suc_ang:')
+        print('{:^10} {:^20} {:^8} {:^10} {:^10} {:^12}'.format('pre_id', 'merchandise name', 'letter', 'state', 'id', 'side_id')) #, pose, euler, cam_H_mrk, suc_ang:')
         for obj in merchandise_list:
-            print('{:^10}  {:^20}  {:^8} {:^10} {:^12}'.format(obj.id, obj.name, obj.letter, obj.state, obj.side_id)) #, obj.pose, obj.euler, obj.cam_H_mrk, obj.suc_ang)
+            print('{:^10} {:^20} {:^8} {:^10} {:^10} {:^12}'.format(obj.pre_id, obj.name, obj.letter, obj.state, obj.id, obj.side_id)) #, obj.pose, obj.euler, obj.cam_H_mrk, obj.suc_ang)
         print('*=====================================*\n')
 
     def get_merchandise_log(self):
@@ -167,11 +170,12 @@ class GetObjInfo():
         base_H_flange = np.array(base_H_flange_list).reshape(4,4)        
 
         base_H_mrks, names, exps, side_ids = [], [], [], []     #obj_mat
+        print('self.ids', self.ids)
         if(np.size(self.ids)==0):
             return [], [], [], [], []
 
         for rvec, tvec, id in zip(self.rvecs, self.tvecs, self.ids):            
-            #get_obj_name: 'name', 'expiration status', 'side_id'
+            #get_obj_name: 'name', 'expiration status', 'side_id'            
             name, exp, side_id = self.get_obj_name(id)
             if(name != 'ERROR'):
                 names = np.append(names, name)
@@ -182,12 +186,13 @@ class GetObjInfo():
                 cam_H_mrk = self.rvectvec2matrix(rvec, tvec)
                 base_H_mrk = self.calculate_mrk2base(cam_H_mrk, flange_H_cam, base_H_flange) #np.mat
                 base_H_mrks = np.append(base_H_mrks, base_H_mrk) #np.mat
-
-                print('id, id/10', id, int(id/10))
-                self.merchandise_list[int(id/10)].id = id
-                self.merchandise_list[int(id/10)].pose = base_H_mrk[0:3, 3]
-                self.merchandise_list[int(id/10)].euler = base_H_mrk[0:3, 2]
-                self.merchandise_list[int(id/10)].cam_H_mrk = cam_H_mrk
+                
+                num = int(id/10)-1                
+                self.merchandise_list[num].id = id
+                self.merchandise_list[num].side_id = side_id
+                self.merchandise_list[num].pose = base_H_mrk[0:3, 3]
+                self.merchandise_list[num].euler = base_H_mrk[0:3, 2]
+                self.merchandise_list[num].cam_H_mrk = cam_H_mrk
 
         base_H_mrks = base_H_mrks.reshape(int(len(base_H_mrks)/16), 4, 4)
         # self.filter_obj(self.ids, base_H_mrks, names, exps, side_ids)        
@@ -241,20 +246,19 @@ class GetObjInfo():
 
     def get_obj_name(self, id):        
         
-        tot = len(self.merchandise_list)
+        tot = len(self.merchandise_list)       
         
-        first_obj_id_min = self.merchandise_list[0].id 
-        last_obj_id_min = self.merchandise_list[tot-1].id
-        
-        if((id >= last_obj_id_min + 10) or (id < first_obj_id_min + 10)): #outside predefined aruco id            
+        first_obj_id_min = self.merchandise_list[0].pre_id 
+        last_obj_id_max = self.merchandise_list[tot-1].pre_id + 10
+                
+        if((id >= last_obj_id_max) or (id < first_obj_id_min)): #outside predefined aruco id            
             # print('ERRRROR!!! id, name, exp_state, side_id: {}, {}, {}, {}'.format(id, 'ERROR', 'expired', 'ERROR'))
-            return 'ERROR', 'expired', id
+            return 'ERROR', 'expired', self.merchandise_side_id_name[id % 10]
         
-        for num in range(0, tot-1): #TODO:check
-            print('num', num)
-            obj_id_min = self.merchandise_list[num].id
-            obj_id_max = obj_id_min + 10            
-            
+        for num in range(0, tot):
+            obj_id_min = self.merchandise_list[num].pre_id
+            obj_id_max = obj_id_min + 10
+
             if ((id >= obj_id_min) and (id < obj_id_max)):
                 self.merchandise_list[num].side_id = self.merchandise_side_id_name[id % 10] #self.merchandise_side_id_name[int(id - obj_id_min)]
                 # print('id, name, exp_state, side_id: {}, {}, {}, {}'.format( \
@@ -264,7 +268,7 @@ class GetObjInfo():
 
     def calculate_mrk2base(self, cam_H_mrk, flange_H_cam, base_H_flange):  #visiontoArm
 
-          # base_H_flange*flange_H_cam*cam_H_mrk
+        # base_H_flange*flange_H_cam*cam_H_mrk
         base_H_mrk = np.dot(base_H_flange, np.dot(flange_H_cam, cam_H_mrk)) 
 
         # # base_H_mrk = base_H_flange*flange_H_tool*tool_H_cam*cam_H_mrk (correct!!!)

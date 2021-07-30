@@ -13,6 +13,7 @@ from std_msgs.msg import Bool, Int32
 
 from arm_control import DualArmTask
 from arm_control import ArmTask, SuctionTask, Command, Status, RobotiqGripper
+# from obj_info import ObjInfo
 from get_image_info import GetObjInfo
 
 

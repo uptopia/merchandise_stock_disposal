@@ -62,13 +62,16 @@ cam_pose = {'left' :[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
 
 class State(IntEnum):
     init            = 0 #(o)
-    move2cam_pose    = 1 #(o)    #take_pic + get_obj_info
-    detect_obj      = 2 #(?)
-    move2obj        = 3
-    check_pose      = 4
-    pick            = 5
-    place           = 6
-    finish          = 7
+    open_drawer     = 1 
+    move2cam_pose   = 2 
+    detect_obj      = 3 
+    move2obj        = 4
+    check_pose      = 5
+    pick            = 6
+    place           = 7
+    organize        = 8
+    close_drawer    = 9
+    finish          = 10
 
 class MerchandiseTask():
     def __init__(self, name_arm_ctrl, en_sim_arm_ctrl):
@@ -162,7 +165,10 @@ class MerchandiseTask():
             arm_state = State.init
 
         elif arm_state == State.init:
-            arm_state = State.move2cam_pose
+            arm_state = State.move2cam_pose #State.open_drawer
+
+        # elif arm_state == State.open_drawer:
+        #     arm_state = State.move2cam_pose
 
         elif arm_state == State.move2cam_pose:
             arm_state = State.detect_obj
@@ -213,9 +219,15 @@ class MerchandiseTask():
             else:
                 arm_state = State.move2obj
 
+        # elif arm_state == State.organize:
+        #     arm_state = State.close_drawer
+
+        # elif arm_state == State.close_drawer:
+        #     arm_state = State.finish
+
         elif arm_state == State.finish:
             arm_state = None
-        
+
         print('SWITCHED to: arm_state= {}, arm_side = {}'.format(arm_state, arm_side))
         return arm_state
 
@@ -231,6 +243,15 @@ class MerchandiseTask():
             cmd['jpos'] = [0, 0, -1.2, 0, 1.87, 0, -0.87, 0] #[0, 0, 0, 0, 0, 0, 0, 0]
             cmd['state'] = State.init
             cmd['speed'] = 100
+            cmd_queue.put(copy.deepcopy(cmd))
+            self.dual_arm.send_cmd(arm_side, True, cmd_queue)
+            print('left_arm.status:', self.dual_arm.left_arm.status)
+            print('right_arm.status:',self.dual_arm.right_arm.status)
+
+        elif arm_state == State.open_drawer:
+            print(' ++++++++++ open_drawer ++++++++++ ', arm_side)
+            #TODO         
+            cmd['state'] = State.open_drawer            
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)
@@ -385,6 +406,24 @@ class MerchandiseTask():
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:', self.dual_arm.right_arm.status)
+
+        elif arm_state == State.organize:
+            print(' ++++++++++ organize ++++++++++ ', arm_side)
+            #TODO        
+            cmd['state'] = State.organize            
+            cmd_queue.put(copy.deepcopy(cmd))
+            self.dual_arm.send_cmd(arm_side, True, cmd_queue)
+            print('left_arm.status:', self.dual_arm.left_arm.status)
+            print('right_arm.status:',self.dual_arm.right_arm.status)
+
+        elif arm_state == State.close_drawer:
+            print(' ++++++++++ organize ++++++++++ ', arm_side)
+            #TODO
+            cmd['state'] = State.close_drawer            
+            cmd_queue.put(copy.deepcopy(cmd))
+            self.dual_arm.send_cmd(arm_side, True, cmd_queue)
+            print('left_arm.status:', self.dual_arm.left_arm.status)
+            print('right_arm.status:',self.dual_arm.right_arm.status)
 
         elif arm_state == State.finish:
             print(' ++++++++++ finish ++++++++++ ', arm_side)

@@ -21,15 +21,22 @@ class MarkerPosture():
         self.cam_info_right_topic = '/camera/color/camera_info'
 
         # Create vectors we'll be using for rotations and translations for postures
+        self.camera_info_left = CameraInfo()
+        self.camera_info_right = CameraInfo()
+        self.img_color_left = []
+        self.img_gray_left = []
+        self.img_color_right = []
+        self.img_gray_right = []
+
         self.ids = None
         self.corners = None
         self.rvecs = None 
         self.tvecs = None
-            
-        self.sub_camera_info_left = rospy.Subscriber(self.cam_info_left_topic, CameraInfo, self.get_camera_info)  
-        self.sub_markers_left = rospy.Subscriber(self.cam_left_topic, Image, self.stream_img)          
-        self.sub_camera_info_right = rospy.Subscriber(self.cam_info_right_topic, CameraInfo, self.get_camera_info)  
-        self.sub_markers_right = rospy.Subscriber(self.cam_right_topic, Image, self.stream_img)
+
+        self.sub_camera_info_left = rospy.Subscriber(self.cam_info_left_topic, CameraInfo, self.get_camera_info_left)
+        self.sub_markers_left = rospy.Subscriber(self.cam_left_topic, Image, self.stream_img_left)
+        self.sub_camera_info_right = rospy.Subscriber(self.cam_info_right_topic, CameraInfo, self.get_camera_info_right)
+        self.sub_markers_right = rospy.Subscriber(self.cam_right_topic, Image, self.stream_img_right)
 
         #initiate ros server
         self.server = rospy.Service('get_ar_marker', aruco_info, self.stream_selected_camera)
@@ -41,13 +48,13 @@ class MarkerPosture():
         #================#
         print("Stream {} hand camera!". format(req.side_cmd))
         
-        if req.side_cmd == 'left':            
-            sub_camera_info_left = rospy.Subscriber(self.cam_info_left_topic, CameraInfo, self.get_camera_info)  
-            sub_markers_left = rospy.Subscriber(self.cam_left_topic, Image, self.stream_img)          
+        if req.side_cmd == 'left':
+            self.height, self.width, self.frame_id, self.intrinsic_matrix, self.distortion_coeff = self.get_camera_info(self.camera_info_left)
+            self.ids, self.corners, self.rvecs, self.tvecs = self.detect_aruco_markers(self.img_color_left, self.img_gray_left)            
             print('Streaming LEFT camera...')
-        else:             
-            sub_camera_info_right = rospy.Subscriber(self.cam_info_right_topic, CameraInfo, self.get_camera_info)  
-            sub_markers_right = rospy.Subscriber(self.cam_right_topic, Image, self.stream_img)
+        else:
+            self.height, self.width, self.frame_id, self.intrinsic_matrix, self.distortion_coeff = self.get_camera_info(self.camera_info_right)
+            self.ids, self.corners, self.rvecs, self.tvecs = self.detect_aruco_markers(self.img_color_right, self.img_gray_right)            
             print('Streaming RIGHT camera...')
             
         #================#
@@ -90,9 +97,11 @@ class MarkerPosture():
 
         return res
 
-    def stream_img(self, data):        
-        img_color, img_gray = self.data2cvimg(data)
-        self.ids, self.corners, self.rvecs, self.tvecs = self.detect_aruco_markers(img_color, img_gray)
+    def stream_img_left(self, data):        
+        self.img_color_left, self.img_gray_left = self.data2cvimg(data)      
+    
+    def stream_img_right(self, data):        
+        self.img_color_right, self.img_gray_right = self.data2cvimg(data)        
 
     def data2cvimg(self, data):        
         bridge = CvBridge()
@@ -105,11 +114,20 @@ class MarkerPosture():
         return img_color, img_gray
 
     def get_camera_info(self, camera_info):
-        self.height = camera_info.height
-        self.width = camera_info.width
-        self.frame_id = camera_info.header.frame_id        
-        self.intrinsic_matrix = np.array(camera_info.K).reshape(3, 3)
-        self.distortion_coeff = np.array(camera_info.D)        
+        height = camera_info.height
+        width = camera_info.width
+        frame_id = camera_info.header.frame_id        
+        intrinsic_matrix = np.array(camera_info.K).reshape(3, 3)
+        distortion_coeff = np.array(camera_info.D)
+        return height, width, frame_id, intrinsic_matrix, distortion_coeff
+    
+    def get_camera_info_left(self, camera_info):
+        self.camera_info_left = camera_info
+        # return self.camera_info_left
+
+    def get_camera_info_right(self, camera_info):
+        self.camera_info_right = camera_info
+        # return self.camera_info_right   
 
     def detect_aruco_markers(self, img_color, img_gray):
         

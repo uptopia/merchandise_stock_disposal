@@ -25,17 +25,20 @@ Drink:              OPQ  (150~, 160~, 170~)     (4 sides)??
 Lunchbox:           RST  (180~, 190~, 200~)     (2 side)
 '''
 #drawer_pose:
-tmp_x = 0.45
-drawer_pose = {'left' :[[[tmp_x,  0.2, -0.15],  [0.0, 0.0, 0.0]],      #shelf level 1
-                        [[tmp_x,  0.2, -0.15],  [0.0, 0.0, 0.0]],     #shelf level 2
-                        [[tmp_x,  0.2, -0.25],    [0.0, 0.0, 0.0]]],  #shelf level 3
+tmp_x = 0.35 #0.45
+tmp_y = 0.35
+drawer_pose = {'left' :[[[tmp_x,  tmp_y, -0.15],  [0.0, 0.0, 0.0]],     #shelf level 1
+                        [[tmp_x,  tmp_y, -0.60],  [0.0, 0.0, 0.0]],     #shelf level 2
+                        [[tmp_x,  tmp_y, -0.95],    [0.0, 0.0, 0.0]]],  #shelf level 3
 
-            'right':[[[tmp_x, -0.2, -0.15],  [0.0, 0.0, 0.0]],         #shelf level 1
-                        [[tmp_x, -0.2, -0.15],  [0.0, 0.0, 0.0]],     #shelf level 2
-                        [[tmp_x, -0.2, -0.25],    [0.0, 0.0, 0.0]]],  #shelf level 3
+                'right':[[[tmp_x, -tmp_y, -0.15],  [0.0, 0.0, 0.0]],    #shelf level 1
+                        [[tmp_x, -tmp_y, -0.60],  [0.0, 0.0, 0.0]],     #shelf level 2
+                        [[tmp_x, -tmp_y, -0.95],    [0.0, 0.0, 0.0]]],  #shelf level 3
 
-            'left_indx' : 0,                                      #_index: current shelf level 
-            'right_indx' : 0}
+                'left_indx_open' : 0,                                 #_index_open: current shelf level 
+                'right_indx_open' : 0,
+                'left_indx_close' : 0,                                #_index_close: current shelf level 
+                'right_indx_close' : 0}
 
 #camera_pose: pos, euler #, phi??
 cam_pose = {'left' :[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
@@ -48,6 +51,9 @@ cam_pose = {'left' :[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
 
           'left_indx' : 0,                                      #_index: current shelf level 
           'right_indx' : 0}
+
+tot_shelf_level = np.size(drawer_pose['left'])/6
+
 
 # place_pose = [[[-0.38,  0, -0.796],[0.0, 0.0, 0.0]],
 #               [[-0.38,  0, -0.796],[0.0, 0.0, 0.0]],
@@ -181,7 +187,7 @@ class MerchandiseTask():
             arm_state = State.open_drawer
 
         elif arm_state == State.open_drawer:
-            arm_state = State.move2cam_pose
+            arm_state = State.close_drawer #State.move2cam_pose
 
         elif arm_state == State.move2cam_pose:
             arm_state = State.detect_obj
@@ -236,7 +242,10 @@ class MerchandiseTask():
         #     arm_state = State.close_drawer
 
         elif arm_state == State.close_drawer:
-            arm_state = State.finish
+            if drawer_pose[arm_side+'_indx_open'] < tot_shelf_level:
+                arm_state = State.init
+            else:
+                arm_state = State.finish
 
         elif arm_state == State.finish:
             arm_state = None
@@ -264,38 +273,40 @@ class MerchandiseTask():
         elif arm_state == State.open_drawer:
             print(' ++++++++++ open_drawer ++++++++++ ', arm_side)
             print('drawer_pose: \n\tarm_side = {}; \n\tpos, euler, phi = {}, {}, {}'.format( 
-                arm_side+'_indx', 
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][0],
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][1],
+                arm_side+'_indx_open', 
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][0],
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][1],
                 0))
             #TODO: can use both hands together????????
             draw_pose = ObjInfo()
-            draw_pose['pos'] = drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][0]
-            
+            draw_pose['pos'] = drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][0]
+            #safe prepare pose
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = [draw_pose['pos'][0]-0.3, draw_pose['pos'][1], draw_pose['pos'][2]], \
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][1], 0
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][1], 0
             cmd_queue.put(copy.deepcopy(cmd))
-            
+            #suck
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = [draw_pose['pos'][0], draw_pose['pos'][1], draw_pose['pos'][2]], \
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][1], 0
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][1], 0
+            cmd['suc_cmd'] = 'Off'
             cmd_queue.put(copy.deepcopy(cmd))
-
+            #pull drawer
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = [draw_pose['pos'][0]-0.2, draw_pose['pos'][1], draw_pose['pos'][2]], \
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][1], 0
-                       
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][1], 0
+            cmd['suc_cmd'] = 0
             # cmd['cmd'] = 'occupied'
             cmd['state'] = State.open_drawer
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
 
             if arm_side != 'fail':
-                drawer_pose[arm_side+'_indx'] += 1         #TODO: 1 shelf level only take picture one time!!!!! NO!!!!
-                print('arm_side move to drawer open pose SUCCEED')
+                drawer_pose[arm_side+'_indx_open'] += 1         #TODO: 1 shelf level only take picture one time!!!!! NO!!!!
+                print('{} arm move move to drawer open pose SUCCEED'.format(arm_side))
             else:
-                print('arm_side move to drawer open pose FAILED')
+                print('{} arm move move to drawer open pose FAILED'.format(arm_side))
+            print('next shelf level = {}'.format(drawer_pose[arm_side+'_indx_open']))
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:',self.dual_arm.right_arm.status)
 
@@ -318,9 +329,9 @@ class MerchandiseTask():
 
             if arm_side != 'fail':
                 cam_pose[arm_side+'_indx'] += 1         #TODO: 1 shelf level only take picture one time!!!!! NO!!!!
-                print('arm_side move to take picture pose SUCCEED')
+                print('{} arm move move to take picture pose SUCCEED'.format(arm_side))
             else:
-                print('arm_side move to take picture pose FAILED')
+                print('{} arm move move to take picture pose FAILED'.format(arm_side))            
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:',self.dual_arm.right_arm.status)
 
@@ -461,38 +472,44 @@ class MerchandiseTask():
         elif arm_state == State.close_drawer:
             print(' ++++++++++ close_drawer ++++++++++ ', arm_side)
             print('drawer_pose: \n\tarm_side = {}; \n\tpos, euler, phi = {}, {}, {}'.format( 
-                arm_side+'_indx', 
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][0],
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][1],
+                arm_side+'_indx_close', 
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_close']][0],
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_close']][1],
                 0))
             #TODO: can use both hands together????????
             draw_pose = ObjInfo()
-            draw_pose['pos'] = drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][0]
+            draw_pose['pos'] = drawer_pose[arm_side][drawer_pose[arm_side+'_indx_close']][0]
             
+            # safe prepare pose
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = [draw_pose['pos'][0]-0.3, draw_pose['pos'][1], draw_pose['pos'][2]], \
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][1], 0
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_close']][1], 0
             cmd_queue.put(copy.deepcopy(cmd))
             
+            # suck
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = [draw_pose['pos'][0]-0.2, draw_pose['pos'][1], draw_pose['pos'][2]], \
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][1], 0
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_close']][1], 0
+            cmd['suc_cmd'] = 0
             cmd_queue.put(copy.deepcopy(cmd))
 
+            # push drawer back
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = [draw_pose['pos'][0], draw_pose['pos'][1], draw_pose['pos'][2]], \
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx']][1], 0
-                       
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_close']][1], 0
+            cmd['suc_cmd'] = 'Off'  #TODO: release sucker when pose reached? or release sucker while moving??
             # cmd['cmd'] = 'occupied'
             cmd['state'] = State.close_drawer
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
 
             if arm_side != 'fail':
-                drawer_pose[arm_side+'_indx'] += 1         #TODO: 1 shelf level only take picture one time!!!!! NO!!!!
-                print('arm_side move to drawer close pose SUCCEED')
+                drawer_pose[arm_side+'_indx_close'] += 1         #TODO: 1 shelf level only take picture one time!!!!! NO!!!!
+                print('{} arm move move to drawer close pose SUCCEED'.format(arm_side))                
             else:
-                print('arm_side move to drawer close pose FAILED')
+                print('{} arm move move to drawer close pose FAILED'.format(arm_side))                
+
+            print('next shelf level = {}'.format(drawer_pose[arm_side+'_indx_close']))
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:',self.dual_arm.right_arm.status)
 

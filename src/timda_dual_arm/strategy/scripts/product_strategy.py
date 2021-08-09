@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from sys import dont_write_bytecode
 import rospy
 import Queue as queue
 # from Queue import Queue
@@ -43,16 +44,19 @@ drawer_pose = {'left' :[[[tmp_x,  tmp_y, -0.15],  [0.0, 0.0, 0.0]],     #shelf l
 #camera_pose: pos, euler #, phi??
 cam_pose = {'left' :[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
                     [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                    [[0.38,  0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
+                    [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
 
-          'right':[[[0.38, -0.2, 0.15],  [0.0, 65, 0.0]],       #shelf level 1
+            'right':[[[0.38, -0.2, 0.15],   [0.0, 65, 0.0]],    #shelf level 1
                     [[0.38, -0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                    [[0.38, -0.2, -0.65],    [0.0, 65, 0.0]]],  #shelf level 3
+                    [[0.38, -0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+            'left_indx' : 0,                                    #_index: current shelf level 
+            'right_indx' : 0}
 
-          'left_indx' : 0,                                      #_index: current shelf level 
-          'right_indx' : 0}
+#stock box
+box_pose = {'left' :[[[-0.28,  0.2, -0.25],  [0.0, -30, 0.0]]],
+            'right': [[[-0.28, -0.2, -0.25],  [0.0, -30, 0.0]]]}
 
-tot_shelf_level = np.size(drawer_pose['left'])/6
+tot_shelf_level = 3 #np.size(drawer_pose['left'])/6
 
 
 # place_pose = [[[-0.38,  0, -0.796],[0.0, 0.0, 0.0]],
@@ -80,17 +84,18 @@ tot_shelf_level = np.size(drawer_pose['left'])/6
 #             [[0.6,  0.2, -0.883], [0, 90, 0]]]]
 
 class State(IntEnum):
-    init            = 0 #(o)
+    init            = 0
     open_drawer     = 1 
-    move2cam_pose   = 2 
-    detect_obj      = 3 
-    move2obj        = 4
-    check_pose      = 5
-    pick            = 6
-    place           = 7
-    organize        = 8
-    close_drawer    = 9
-    finish          = 10
+    move_cam2shelf  = 2
+    move_cam2box    = 3
+    detect_obj      = 4 
+    move2obj        = 5
+    check_pose      = 6
+    pick            = 7
+    place           = 8
+    organize        = 9
+    close_drawer    = 10
+    finish          = 11
 
 class MerchandiseTask():
     def __init__(self, name_arm_ctrl, en_sim_arm_ctrl):
@@ -108,8 +113,16 @@ class MerchandiseTask():
         
         # self.place_pose_queue = queue.Queue()
 
-        self.object_queue = queue.Queue()   #object detected from both camera
-        
+        # self.object_queue = queue.Queue()   #object detected from both camera
+        self.expired_queue = queue.Queue()  #no reorient
+        self.old_queue = queue.Queue()      #need reorient
+        self.new_queue = queue.Queue()      #no reorient
+
+        #current level 
+        self.expired_done = False   #this_level_expired_done
+        self.old_done = False       #this_level_old_done
+        self.new_done = False       #this_level_new_done
+
         self.left_tar_obj = queue.Queue()
         self.right_tar_obj = queue.Queue()
 
@@ -122,8 +135,7 @@ class MerchandiseTask():
         # self.retry_obj_queue = {'left': self.left_retry_obj, 'right': self.right_retry_obj}
         
         # self.obj_done = np.zeros((100), dtype=bool)
-        # self.obj_retry = np.zeros((100), dtype=bool)
-        self.next_level = {'left': False, 'right': False}  #go_to_next_level?
+        # self.obj_retry = np.zeros((100), dtype=bool)    
 
     #     self.init()            
     
@@ -141,22 +153,31 @@ class MerchandiseTask():
         if ids is None:
             return
         for id, base_H_mrk, name, exp, side_id in zip(ids, base_H_mrks, names, exps, side_ids):
-            
             num = int(id/10)-1
             self.curr_merchandise_list[num]['id'] = id
             self.curr_merchandise_list[num]['side_id'] = side_id
+            self.curr_merchandise_list[num]['expired'] = exp
             
             self.curr_merchandise_list[num]['pos'] = base_H_mrk[0:3, 3]
             self.curr_merchandise_list[num]['vector'] = base_H_mrk[0:3, 2]  #aruco_z_axis, rotation (coordinate_axis: aruco z axis)
             self.curr_merchandise_list[num]['sucang'], roll = self.dual_arm.suc2vector(base_H_mrk[0:3, 2], [0, 1.57, 0])    #TODO #suck ang(0-90), roll (7 axi)
             self.curr_merchandise_list[num]['euler'] = [roll, 90, 0]      
 
-            self.camera.print_merchandise_log(self.curr_merchandise_list)
+            # self.camera.print_merchandise_log(self.curr_merchandise_list)
 
             #Check Arm approach from [TOP] or [DOWN]: aruco_z_axis's [z value]
             if self.curr_merchandise_list[num]['vector'][2] >= -0.2:  #TODO aruco_z_axis's [z value]>=, >???
                 #Arm approach from top => GOOD to go!!!                
-                self.object_queue.put(self.curr_merchandise_list[num])
+                # self.object_queue.put(self.curr_merchandise_list[num])
+                if self.curr_merchandise_list[num]['expired'] == 'expired':
+                    self.expired_queue.put(self.curr_merchandise_list[num])
+                elif self.curr_merchandise_list[num]['expired'] == 'old':
+                    self.old_queue.put(self.curr_merchandise_list[num])
+                elif self.curr_merchandise_list[num]['expired'] == 'new':
+                    self.new_queue.put(self.curr_merchandise_list[num])
+                else: #ERROR
+                    print('eerrrror')
+                    pass
                 print('Good!!! object put in queue; name: {}, id: {}'.format(self.curr_merchandise_list[num]['name'], self.curr_merchandise_list[num]['id']))                
             else:                
                 print('ERROR!!! Arm approach from downside => BAD, aruco_z_axis: {}'.format(self.curr_merchandise_list[num]['vector']))
@@ -182,25 +203,27 @@ class MerchandiseTask():
         print('\nCURRENT: arm_state= {}, arm_side = {}'.format(arm_state, arm_side))
         if arm_state is None:
             arm_state = State.init
-
         elif arm_state == State.init:
             arm_state = State.open_drawer
-
         elif arm_state == State.open_drawer:
-            arm_state = State.close_drawer #State.move2cam_pose
-
-        elif arm_state == State.move2cam_pose:
+            arm_state = State.move_cam2shelf
+        elif arm_state == State.move_cam2shelf:
+            arm_state = State.detect_obj
+        elif arm_state == State.move_cam2box:
             arm_state = State.detect_obj
 
         elif arm_state == State.detect_obj:
-            if self.object_queue.empty():
-                print('camera at shelf level #{}'.format(cam_pose[arm_side+'_indx']))
-                if cam_pose[arm_side+'_indx'] >= 3:                    
+            #TODO: check if it works
+            if self.expired_queue.empty() & self.old_queue.empty() & self.new_queue.empty():
+                if cam_pose[arm_side+'_indx'] <= tot_shelf_level:
+                    if (self.expired_done==True & self.old_done==True):
+                        arm_state = State.move_cam2shelf #move_cam2 to shelf #take pic
+                    else:
+                        arm_state = State.move_cam2box #move_cam2 stock box #take pic
+                else:
                     arm_state = State.finish
-                else:                    
-                    arm_state = State.move2cam_pose                    
-            else:
-                arm_state = State.move2obj                
+            else: #have obj in queue
+                arm_state = State.move2obj
         
         elif arm_state == State.move2obj:
             arm_state = State.check_pose
@@ -218,10 +241,10 @@ class MerchandiseTask():
                 arm_state = State.place
             elif self.next_level[arm_side] == True:
                 self.next_level[arm_side] = False
-                if cam_pose[arm_side+'_indx'] >= 3:
+                if cam_pose[arm_side+'_indx'] >= tot_shelf_level:
                     arm_state = State.close_drawer #State.finish
                 else:
-                    arm_state = State.move2cam_pose   #move to next level shelf to take picture
+                    arm_state = State.move_cam2shelf   #move to next level shelf to take picture
             else:
                 # if self.obj_retry[self.target_obj[arm_side]['id']] == False:
                 #     self.retry_obj_queue[arm_side].put(self.target_obj[arm_side])
@@ -231,10 +254,10 @@ class MerchandiseTask():
         elif arm_state == State.place:
             if self.next_level[arm_side] == True:
                 self.next_level[arm_side] = False
-                if cam_pose[arm_side+'_indx'] >= 3:
+                if cam_pose[arm_side+'_indx'] >= tot_shelf_level:
                     arm_state = State.close_drawer #State.finish
                 else:
-                    arm_state = State.move2cam_pose   #move to next level shelf to take picture
+                    arm_state = State.move_cam2shelf   #move to next level shelf to take picture
             else:
                 arm_state = State.move2obj
 
@@ -243,7 +266,7 @@ class MerchandiseTask():
 
         elif arm_state == State.close_drawer:
             if drawer_pose[arm_side+'_indx_open'] < tot_shelf_level:
-                arm_state = State.init
+                arm_state = State.init #State.open_drawer
             else:
                 arm_state = State.finish
 
@@ -310,8 +333,8 @@ class MerchandiseTask():
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:',self.dual_arm.right_arm.status)
 
-        elif arm_state == State.move2cam_pose:
-            print(' ++++++++++ move2cam_pose ++++++++++ ', arm_side)            
+        elif arm_state == State.move_cam2shelf:
+            print(' ++++++++++ move_cam2shelf ++++++++++ ', arm_side)            
             print('camera_pose: \n\tarm_side = {}; \n\tpos, euler, phi = {}, {}, {}'.format( 
                 arm_side+'_indx', 
                 cam_pose[arm_side][cam_pose[arm_side+'_indx']][0],
@@ -323,7 +346,7 @@ class MerchandiseTask():
             cmd_queue.put(copy.deepcopy(cmd))
             
             cmd['cmd'] = 'occupied'
-            cmd['state'] = State.move2cam_pose
+            cmd['state'] = State.move_cam2shelf
             cmd_queue.put(copy.deepcopy(cmd))
             arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
 
@@ -335,9 +358,37 @@ class MerchandiseTask():
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:',self.dual_arm.right_arm.status)
 
+        elif arm_state == State.move_cam2box:
+            print(' ++++++++++ move_cam2box ++++++++++ ', arm_side)            
+            print('box_pose: \n\tarm_side = {}; \n\tpos, euler, phi = {}, {}, {}'.format( 
+                arm_side+'_indx', 
+                box_pose[arm_side][0][0],
+                box_pose[arm_side][0][1],
+                0))
+            
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
+            cmd['pos'], cmd['euler'], cmd['phi'] = box_pose[arm_side][0][0], box_pose[arm_side][0][1], 0
+            cmd_queue.put(copy.deepcopy(cmd))
+            
+            cmd['cmd'] = 'occupied'
+            cmd['state'] = State.move_cam2box
+            cmd_queue.put(copy.deepcopy(cmd))
+            arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
+
+            if arm_side != 'fail':
+                cam_pose[arm_side+'_indx'] += 1         #TODO: 1 shelf level only take picture one time!!!!! NO!!!!
+                print('{} arm move move to take picture box pose SUCCEED'.format(arm_side))
+            else:
+                print('{} arm move move to take picture box pose FAILED'.format(arm_side))            
+            print('left_arm.status:', self.dual_arm.left_arm.status)
+            print('right_arm.status:',self.dual_arm.right_arm.status)
+
         elif arm_state == State.detect_obj:
             print(' ++++++++++ detect_obj ++++++++++ ', arm_side)
             self.get_obj_info(arm_side)
+            print('total expired_queue', self.expired_queue.qsize())
+            print('total old_queue', self.old_queue.qsize())
+            print('total new_queue', self.new_queue.qsize())
 
             cmd['cmd'] = None
             cmd['state'] = State.detect_obj

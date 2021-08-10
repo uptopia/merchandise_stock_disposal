@@ -84,18 +84,18 @@ tot_shelf_level = 3 #np.size(drawer_pose['left'])/6
 #             [[0.6,  0.2, -0.883], [0, 90, 0]]]]
 
 class State(IntEnum):
-    init            = 0
-    open_drawer     = 1 
-    move_cam2shelf  = 2
-    move_cam2box    = 3
-    detect_obj      = 4 
-    move2obj        = 5
-    check_pose      = 6
-    pick            = 7
-    place           = 8
-    organize        = 9
-    close_drawer    = 10
-    finish          = 11
+    init                = 0
+    open_drawer         = 1 
+    move_cam2shelf      = 2
+    move_cam2box        = 3
+    detect_obj          = 4 
+    move2obj            = 5
+    check_closer_pose   = 6
+    pick                = 7
+    place               = 8
+    organize            = 9
+    close_drawer        = 10
+    finish              = 11
 
 class MerchandiseTask():
     def __init__(self, name_arm_ctrl, en_sim_arm_ctrl):
@@ -125,13 +125,11 @@ class MerchandiseTask():
 
         self.left_tar_obj = queue.Queue()
         self.right_tar_obj = queue.Queue()
-
-        # self.left_retry_obj = queue.Queue()
-        # self.right_retry_obj = queue.Queue()
-
         self.target_obj_queue = {'left' : self.left_tar_obj, 'right' : self.right_tar_obj}
         self.target_obj = {'left': None, 'right': None}
-
+    
+        # self.left_retry_obj = queue.Queue()
+        # self.right_retry_obj = queue.Queue()
         # self.retry_obj_queue = {'left': self.left_retry_obj, 'right': self.right_retry_obj}
         
         # self.obj_done = np.zeros((100), dtype=bool)
@@ -170,10 +168,13 @@ class MerchandiseTask():
                 #Arm approach from top => GOOD to go!!!                
                 # self.object_queue.put(self.curr_merchandise_list[num])
                 if self.curr_merchandise_list[num]['expired'] == 'expired':
+                    #TODO: check current shelf level
                     self.expired_queue.put(self.curr_merchandise_list[num])
                 elif self.curr_merchandise_list[num]['expired'] == 'old':
+                    #TODO: check current shelf level
                     self.old_queue.put(self.curr_merchandise_list[num])
                 elif self.curr_merchandise_list[num]['expired'] == 'new':
+                    #TODO: check current shelf level
                     self.new_queue.put(self.curr_merchandise_list[num])
                 else: #ERROR
                     print('eerrrror')
@@ -182,7 +183,7 @@ class MerchandiseTask():
             else:                
                 print('ERROR!!! Arm approach from downside => BAD, aruco_z_axis: {}'.format(self.curr_merchandise_list[num]['vector']))
 
-    def check_pose(self, arm_side):
+    def check_closer_pose(self, arm_side):
         self.target_obj[arm_side] = self.target_obj_queue[arm_side].get()
 
         fb = self.dual_arm.get_feedback(arm_side)        
@@ -190,10 +191,11 @@ class MerchandiseTask():
 
         if ids is None:
             return
+
         for id, base_H_mrk, in zip(ids, base_H_mrks):
             if id == self.target_obj[arm_side]['id']:
                 self.target_obj[arm_side]['pos'] = base_H_mrk[0:3, 3] 
-                if base_H_mrk[2, 2] > -0.1: #TODO: i dont know z value > -0.1????
+                if base_H_mrk[2, 2] > -0.1: #FIXME: value= ?? #TODO: i dont know z value > -0.1????
                     self.target_obj[arm_side]['sucang'], roll = self.dual_arm.suc2vector(base_H_mrk[0:3, 2], [0, 1.57, 0])
                     self.target_obj[arm_side]['euler']   = [roll, 90, 0]
         pass
@@ -226,9 +228,9 @@ class MerchandiseTask():
                 arm_state = State.move2obj
         
         elif arm_state == State.move2obj:
-            arm_state = State.check_pose
+            arm_state = State.check_closer_pose
 
-        elif arm_state == State.check_pose:
+        elif arm_state == State.check_closer_pose:
             arm_state = State.pick
         
         elif arm_state == State.pick:
@@ -344,9 +346,8 @@ class MerchandiseTask():
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = cam_pose[arm_side][cam_pose[arm_side+'_indx']][0], cam_pose[arm_side][cam_pose[arm_side+'_indx']][1], 0
             cmd_queue.put(copy.deepcopy(cmd))
-            
-            cmd['cmd'] = 'occupied'
-            cmd['state'] = State.move_cam2shelf
+                        
+            cmd['cmd'], cmd['state'] = 'occupied', State.move_cam2shelf
             cmd_queue.put(copy.deepcopy(cmd))
             arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
 
@@ -369,9 +370,8 @@ class MerchandiseTask():
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = box_pose[arm_side][0][0], box_pose[arm_side][0][1], 0
             cmd_queue.put(copy.deepcopy(cmd))
-            
-            cmd['cmd'] = 'occupied'
-            cmd['state'] = State.move_cam2box
+                        
+            cmd['cmd'], cmd['state'] = 'occupied', State.move_cam2box
             cmd_queue.put(copy.deepcopy(cmd))
             arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
 
@@ -399,50 +399,54 @@ class MerchandiseTask():
 
         elif arm_state == State.move2obj:
             print(' ++++++++++ move2obj ++++++++++ ', arm_side)
-            obj = None
-            if self.object_queue.empty():
-                self.next_level[arm_side] = True
-                print('object_queue.empty()= True, no merchandise, Move to next level of shelf')
-                return
+
+            # expired(disposal) -> old(reorient) -> new(stock)
+            if self.expired_queue.qsize() > 0: 
+                obj = self.expired_queue.get()
+                #dispose State.dispose
+            elif self.old_queue.qsize() > 0:
+                obj = self.old_queue.get()
+                #reorient State.dispose
+            elif self.new_queue.qsize() > 0:
+                obj = self.new_queue.get()
+                #stock State.stock
             else:
-                #TODO:check object_queue if fail grasp, do what??? target_obj_queue, obj_done
-
-                # for _ in range(self.object_queue.qsize()):
                 obj = ObjInfo()
-                obj['name'] = 'ERROR'
-                while(obj['name']=='ERROR'):
-                    obj = self.object_queue.get() #remove 'ERROR' (aruco ID detected, but it's not in the predefined ID)
-                    
-                print(obj['name'], obj['id'], obj['side_id'], obj['expired'])
-     
-                pos = copy.deepcopy(obj['pos']) #(x, y, z): base_H_mrks[0:3, 3]                
-                # pos[1] += 0.032
-                # pos[2] += 0.065
-                cmd['suc_cmd'] = 'Off'
-                cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
-                cmd['state'] = State.move2obj
-                cmd['pos'], cmd['euler'], cmd['phi'] = pos, [0, 90, 0], 0 #[0.4, pos[1], pos[2]], [0, 90, 0], 0
-                cmd_queue.put(copy.deepcopy(cmd))
+       
+            #TODO:check object_queue if fail grasp, do what??? target_obj_queue, obj_done                    
+            print(obj['name'], obj['id'], obj['side_id'], obj['expired'])
+                 
+            cmd['suc_cmd'] = 'Off'            
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'            
+            pos = copy.deepcopy(obj['pos'])     #(x, y, z): base_H_mrks[0:3, 3]            
+            shift = 0.05                        #FIXME: how far should the camera be???
+            cmd['pos'], cmd['euler'], cmd['phi'] = [pos[0]+shift, pos[1]+shift, pos[2]+shift] , [0, 90, 0], 0
+            cmd_queue.put(copy.deepcopy(cmd))
 
-                cmd['cmd'] = 'occupied'
-                cmd_queue.put(copy.deepcopy(cmd))
-                arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
+            cmd['cmd'], cmd['state'] = 'occupied', State.move2obj
+            cmd_queue.put(copy.deepcopy(cmd))
+            arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
 
-                if arm_side == 'fail': #TODO: failed because of what???? cannot reach???
-                    self.object_queue.put(obj)  #bcus failed so put the obj back to queue
-                    # self.obj_done[obj['id']] = False
-                    print('move2obj FAILED!!!!!!! arm_side = {}, name = {}, id = {}'.format(arm_side, obj['name'], obj['id']))
-                else:
-                    self.target_obj_queue[arm_side].put(obj)
-                    print('move2obj OK! arm_side = {}, name = {}, id = {}'.format(arm_side, obj['name'], obj['id']))
+            if arm_side == 'fail': #TODO: failed because of what???? cannot reach???
+                if obj['expired'] == 'expired':
+                    self.expired_queue.put(obj)  #bcus failed so put the obj back to queue
+                elif obj['expired'] == 'old':
+                    self.old_queue.put(obj)
+                elif obj['expired'] == 'new':
+                    self.new_queue.put(obj)
+                # self.obj_done[obj['id']] = False
+                print('move2obj FAILED!!!!!!! arm_side = {}, name = {}, id = {}'.format(arm_side, obj['name'], obj['id']))
+            else:
+                self.target_obj_queue[arm_side].put(obj)
+                print('move2obj OK! arm_side = {}, name = {}, id = {}'.format(arm_side, obj['name'], obj['id']))
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:', self.dual_arm.right_arm.status)
 
-        elif arm_state == State.check_pose:
-            print(' ++++++++++ check_pose ++++++++++ ', arm_side)
-            self.check_pose(arm_side)
+        elif arm_state == State.check_closer_pose:
+            print(' ++++++++++ check_closer_pose ++++++++++ ', arm_side)
+            self.check_closer_pose(arm_side)
 
-            cmd['cmd'], cmd['state'] = 'occupied', State.check_pose
+            cmd['cmd'], cmd['state'] = 'occupied', State.check_closer_pose
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)
@@ -450,32 +454,31 @@ class MerchandiseTask():
 
         elif arm_state == State.pick:
             print(' ++++++++++ pick ++++++++++ ', arm_side)
+            #TODO: check ori code, i don't know how to rewrite
+
             obj = copy.deepcopy(self.target_obj[arm_side])
-            if obj['vector'][2] > 0.7:
-                obj['pos'][0] -= 0.02
-               # obj['pos'][2] += 0.05
+            pos = copy.deepcopy(obj['pos'])
+            mrk_z_axis = copy.deepcopy(obj['vector'])
+            
+            #get close + suc off
+            cmd['suc_cmd'] = 'Off'
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p' #line
+            cmd['pos'], cmd['euler'], cmd['phi'] = [pos[0], pos[1], pos[2]], obj['euler'], 0            
+            cmd_queue.put(copy.deepcopy(cmd))
+            
+            #attach + suc on
+            cmd['suc_cmd'] = 'On'
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p' #line
+            cmd['pos'], cmd['euler'], cmd['phi'] = pos, obj['euler'], 0       
+            cmd_queue.put(copy.deepcopy(cmd))
 
+            #attach + suc on + back off
+            cmd['suc_cmd'] = 'On'
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p' #line
+            cmd['pos'], cmd['euler'], cmd['phi'] = [pos[0], pos[1], pos[2]], obj['euler'], 0
             cmd['state'] = State.pick
-            cmd['cmd'], cmd['mode'] = 'fromtNoaTarget', 'line'          #????
-            cmd['pos'], cmd['euler'], cmd['phi'] = obj['pos'], obj['euler'], 0
-            cmd['suc_cmd'], cmd['noa'] = obj['sucang'], [0, 0, -0.03]
             cmd_queue.put(copy.deepcopy(cmd))
-
-            cmd['cmd'], cmd['mode'], cmd['noa'] = 'grasping', 'line', [0, 0, 0.05]  #???/
-            cmd['suc_cmd'], cmd['speed'] = 'On', 15
-            if obj['vector'][2] < 0.2:
-                cmd['speed'] = 30
-            cmd_queue.put(copy.deepcopy(cmd))
-
-            cmd['cmd'], cmd['mode'],  = 'relativePos', 'line'   #
-            cmd['speed'], cmd['suc_cmd'] = 40, 'calibration'    #????
-            cmd['pos'] = [0, 0, 0.03]
-            cmd_queue.put(copy.deepcopy(cmd))
-
-            cmd['cmd'], cmd['mode'] = 'ikMove', 'line'
-            cmd['pos'], cmd['euler'], cmd['phi'] = [0.45, obj['pos'][1], obj['pos'][2]+0.08], obj['euler'], 0
-            cmd_queue.put(copy.deepcopy(cmd))
-            self.dual_arm.send_cmd(arm_side, True, cmd_queue)
+            arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:', self.dual_arm.right_arm.status)
 

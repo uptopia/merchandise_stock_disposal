@@ -136,7 +136,7 @@ class MarkerPosture():
         axisLength = 0.010
         ARUCO_PARAMETERS = aruco.DetectorParameters_create()
         # ARUCO_PARAMETERS.adaptiveThreshConstant = 10
-        ARUCO_DICT = aruco.Dictionary_get(aruco.DICT_ARUCO_ORIGINAL) #DICT_ARUCO_ORIGINAL, DICT_5X5_250      
+        ARUCO_DICT = aruco.Dictionary_get(aruco.DICT_5X5_250) #DICT_ARUCO_ORIGINAL, DICT_5X5_250      
 
         # Detect Aruco markers
         self.corners, self.ids, rejectedImgPoints = aruco.detectMarkers(img_gray, ARUCO_DICT, parameters = ARUCO_PARAMETERS)

@@ -212,7 +212,7 @@ class GetObjInfo():
                 
         if((id >= last_obj_id_max) or (id < first_obj_id_min)): #outside predefined aruco id            
             # print('ERRRROR!!! id, name, exp_state, side_id: {}, {}, {}, {}'.format(id, 'ERROR', 'expired', 'ERROR'))
-            return 'ERROR', 'expired', self.merchandise_side_id_name[id % 10]
+            return 'ERROR', 'ERROR', self.merchandise_side_id_name[id % 10]
         
         for num in range(0, tot):
             obj_id_min = self.merchandise_list[num]['pre_id']

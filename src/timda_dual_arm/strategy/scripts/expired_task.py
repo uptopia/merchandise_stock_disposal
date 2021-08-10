@@ -293,20 +293,25 @@ class ExpiredTask:
             if obj['vector'][2] > 0.7:
                 obj['pos'][0] -= 0.02
                # obj['pos'][2] += 0.05
+
+            #approach
             cmd['state'] = State.pick
             cmd['cmd'], cmd['mode'] = 'fromtNoaTarget', 'line'          #????
             cmd['pos'], cmd['euler'], cmd['phi'] = obj['pos'], obj['euler'], 0
             cmd['suc_cmd'], cmd['noa'] = obj['sucang'], [0, 0, -0.03]
             cmd_queue.put(copy.deepcopy(cmd))
+            #sucker on approach from a direction 0.05
             cmd['cmd'], cmd['mode'], cmd['noa'] = 'grasping', 'line', [0, 0, 0.05]  #???/
             cmd['suc_cmd'], cmd['speed'] = 'On', 15
             if obj['vector'][2] < 0.2:
                 cmd['speed'] = 30
             cmd_queue.put(copy.deepcopy(cmd))
+            #after suction move up relative pose 0.03 to avoid touching board
             cmd['cmd'], cmd['mode'],  = 'relativePos', 'line'   #
             cmd['speed'], cmd['suc_cmd'] = 40, 'calibration'    #????
             cmd['pos'] = [0, 0, 0.03]
             cmd_queue.put(copy.deepcopy(cmd))
+            #move to a pose
             cmd['cmd'], cmd['mode'] = 'ikMove', 'line'
             cmd['pos'], cmd['euler'], cmd['phi'] = [0.45, obj['pos'][1], obj['pos'][2]+0.08], obj['euler'], 0
             cmd_queue.put(copy.deepcopy(cmd))

@@ -8,6 +8,7 @@ import copy
 import numpy as np
 from enum import IntEnum
 from math import radians, degrees, sin, cos, pi
+import math
 
 from std_msgs.msg import Bool, Int32
 
@@ -42,6 +43,7 @@ drawer_pose = {'left' :[[[tmp_x,  tmp_y, -0.15],  [0.0, 0.0, 0.0]],     #shelf l
                 'right_indx_close' : 0}
 
 #camera_pose: pos, euler #, phi??
+#cam_pose_shelf
 cam_pose = {'left' :[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
                     [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
                     [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
@@ -53,11 +55,60 @@ cam_pose = {'left' :[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
             'right_indx' : 0}
 
 #stock box
+#cam_pose_box
 box_pose = {'left' :[[[-0.28,  0.2, -0.25],  [0.0, -30, 0.0]]],
             'right': [[[-0.28, -0.2, -0.25],  [0.0, -30, 0.0]]]}
 
 tot_shelf_level = 3 #np.size(drawer_pose['left'])/6
 
+#dispose box
+dispose_pose = {'plum_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                                [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                                [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'salmon_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                                [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                                [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'sandwich':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'hamburger':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'drink':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                        [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                        [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'lunchbox':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                }
+#reorient pose
+reorient_pose = {'plum_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                                [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                                [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'salmon_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                                [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                                [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'sandwich':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'hamburger':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'drink':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                        [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                        [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                'lunchbox':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
+                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
+                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+                }
+
+#shelf first obj pose
+shelf_pose = {  'plum_riceball':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                'salmon_riceball':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                'sandwich':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],  
+                'hamburger':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],                   
+                'drink':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],                   
+                'lunchbox':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]}
 
 # place_pose = [[[-0.38,  0, -0.796],[0.0, 0.0, 0.0]],
 #               [[-0.38,  0, -0.796],[0.0, 0.0, 0.0]],
@@ -92,10 +143,12 @@ class State(IntEnum):
     move2obj            = 5
     check_closer_pose   = 6
     pick                = 7
-    place               = 8
-    organize            = 9
-    close_drawer        = 10
-    finish              = 11
+    dispose             = 8
+    reorient            = 9
+    stock               = 10    
+    organize            = 11
+    close_drawer        = 12
+    finish              = 13
 
 class MerchandiseTask():
     def __init__(self, name_arm_ctrl, en_sim_arm_ctrl):
@@ -206,14 +259,13 @@ class MerchandiseTask():
         if arm_state is None:
             arm_state = State.init
         elif arm_state == State.init:
-            arm_state = State.open_drawer
+            arm_state = State.move_cam2shelf#State.open_drawer #State.move_cam2shelf#
         elif arm_state == State.open_drawer:
             arm_state = State.move_cam2shelf
         elif arm_state == State.move_cam2shelf:
             arm_state = State.detect_obj
         elif arm_state == State.move_cam2box:
             arm_state = State.detect_obj
-
         elif arm_state == State.detect_obj:
             #TODO: check if it works
             if self.expired_queue.empty() & self.old_queue.empty() & self.new_queue.empty():
@@ -228,7 +280,7 @@ class MerchandiseTask():
                 arm_state = State.move2obj
         
         elif arm_state == State.move2obj:
-            arm_state = State.check_closer_pose
+            arm_state = State.pick#State.check_closer_pose
 
         elif arm_state == State.check_closer_pose:
             arm_state = State.pick
@@ -239,10 +291,21 @@ class MerchandiseTask():
             else:
                 is_grip = self.dual_arm.right_arm.suction.is_grip
 
-            if is_grip:
-                arm_state = State.place
-            elif self.next_level[arm_side] == True:
-                self.next_level[arm_side] = False
+            if is_grip:                
+                if(self.target_obj[arm_side]['expired']=='expired'):    #dispose
+                    arm_state = State.dispose
+                elif(self.target_obj[arm_side]['expired']=='old'):      #reorient
+                    arm_state = State.reorient
+                elif(self.target_obj[arm_side]['expired']=='new'):      #stock
+                    arm_state = State.stock
+                else:
+                    arm_state = State.place
+
+            elif (self.expired_done & self.old_done & self.new_done) == True: #if current level done
+                self.expired_done = False
+                self.old_done = False
+                self.new_done = False               
+
                 if cam_pose[arm_side+'_indx'] >= tot_shelf_level:
                     arm_state = State.close_drawer #State.finish
                 else:
@@ -252,6 +315,13 @@ class MerchandiseTask():
                 #     self.retry_obj_queue[arm_side].put(self.target_obj[arm_side])
                 # arm_state = State.move2obj
                 arm_state = State.finish #tmp
+
+        elif arm_state == State.dispose:
+            arm_state = State.move2obj
+        elif arm_state == State.reorient:
+            arm_state = State.move2obj
+        elif arm_state == State.stock:
+            arm_state = State.move2obj
 
         elif arm_state == State.place:
             if self.next_level[arm_side] == True:
@@ -287,11 +357,11 @@ class MerchandiseTask():
         if arm_state == State.init:
             print(' ++++++++++ init ++++++++++ ', arm_side)
             cmd['cmd'] = 'jointMove'            
-            cmd['jpos'] = [0, 0, -1.2, 0, 1.87, 0, -0.87, 0] #[0, 0, 0, 0, 0, 0, 0, 0]
+            cmd['jpos'] = [0, 0, -1.2, 0, 1.87, 0, -0.87, 0] #[0, 0, 0, 0, 0, 0, 0, 0]            
             cmd['state'] = State.init
             cmd['speed'] = 100
             cmd_queue.put(copy.deepcopy(cmd))
-            self.dual_arm.send_cmd(arm_side, True, cmd_queue)
+            self.dual_arm.send_cmd(arm_side, False, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:',self.dual_arm.right_arm.status)
 
@@ -306,23 +376,23 @@ class MerchandiseTask():
             draw_pose = ObjInfo()
             draw_pose['pos'] = drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][0]
             #safe prepare pose
+            cmd['state'] = State.open_drawer
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = [draw_pose['pos'][0]-0.3, draw_pose['pos'][1], draw_pose['pos'][2]], \
                 drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][1], 0
             cmd_queue.put(copy.deepcopy(cmd))
             #suck
+            cmd['suc_cmd'] = 'Off'
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = [draw_pose['pos'][0], draw_pose['pos'][1], draw_pose['pos'][2]], \
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][1], 0
-            cmd['suc_cmd'] = 'Off'
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][1], 0            
             cmd_queue.put(copy.deepcopy(cmd))
             #pull drawer
+            cmd['suc_cmd'] = 0
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = [draw_pose['pos'][0]-0.2, draw_pose['pos'][1], draw_pose['pos'][2]], \
-                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][1], 0
-            cmd['suc_cmd'] = 0
-            # cmd['cmd'] = 'occupied'
-            cmd['state'] = State.open_drawer
+                drawer_pose[arm_side][drawer_pose[arm_side+'_indx_open']][1], 0            
+            # cmd['cmd'] = 'occupied'            
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
 
@@ -343,13 +413,15 @@ class MerchandiseTask():
                 cam_pose[arm_side][cam_pose[arm_side+'_indx']][1],
                 0))
             
+            cmd['state'] = State.move_cam2shelf
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = cam_pose[arm_side][cam_pose[arm_side+'_indx']][0], cam_pose[arm_side][cam_pose[arm_side+'_indx']][1], 0
             cmd_queue.put(copy.deepcopy(cmd))
                         
-            cmd['cmd'], cmd['state'] = 'occupied', State.move_cam2shelf
+            # cmd['cmd'], cmd['state'] = 'occupied', State.move_cam2shelf
+            cmd['cmd'] = 'occupied'
             cmd_queue.put(copy.deepcopy(cmd))
-            arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
+            arm_side = self.dual_arm.send_cmd(arm_side, True, cmd_queue)
 
             if arm_side != 'fail':
                 cam_pose[arm_side+'_indx'] += 1         #TODO: 1 shelf level only take picture one time!!!!! NO!!!!
@@ -367,13 +439,15 @@ class MerchandiseTask():
                 box_pose[arm_side][0][1],
                 0))
             
+            cmd['state'] = State.move_cam2box
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'
             cmd['pos'], cmd['euler'], cmd['phi'] = box_pose[arm_side][0][0], box_pose[arm_side][0][1], 0
             cmd_queue.put(copy.deepcopy(cmd))
                         
-            cmd['cmd'], cmd['state'] = 'occupied', State.move_cam2box
+            # cmd['cmd'], cmd['state'] = 'occupied', State.move_cam2box
+            cmd['cmd'] = 'occupied'
             cmd_queue.put(copy.deepcopy(cmd))
-            arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
+            arm_side = self.dual_arm.send_cmd(arm_side, True, cmd_queue)
 
             if arm_side != 'fail':
                 cam_pose[arm_side+'_indx'] += 1         #TODO: 1 shelf level only take picture one time!!!!! NO!!!!
@@ -415,7 +489,8 @@ class MerchandiseTask():
        
             #TODO:check object_queue if fail grasp, do what??? target_obj_queue, obj_done                    
             print(obj['name'], obj['id'], obj['side_id'], obj['expired'])
-                 
+
+            cmd['state'] = State.move2obj                 
             cmd['suc_cmd'] = 'Off'            
             cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'            
             pos = copy.deepcopy(obj['pos'])     #(x, y, z): base_H_mrks[0:3, 3]            
@@ -423,9 +498,10 @@ class MerchandiseTask():
             cmd['pos'], cmd['euler'], cmd['phi'] = [pos[0]+shift, pos[1]+shift, pos[2]+shift] , [0, 90, 0], 0
             cmd_queue.put(copy.deepcopy(cmd))
 
-            cmd['cmd'], cmd['state'] = 'occupied', State.move2obj
+            # cmd['cmd'], cmd['state'] = 'occupied', State.move2obj
+            cmd['cmd'] = 'occupied'
             cmd_queue.put(copy.deepcopy(cmd))
-            arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
+            arm_side = self.dual_arm.send_cmd(arm_side, True, cmd_queue)
 
             if arm_side == 'fail': #TODO: failed because of what???? cannot reach???
                 if obj['expired'] == 'expired':
@@ -456,29 +532,81 @@ class MerchandiseTask():
             print(' ++++++++++ pick ++++++++++ ', arm_side)
             #TODO: check ori code, i don't know how to rewrite
 
+            #======SKIP check_closer_pose FOR VIRTUAL TESTING=======#
+            #======COMMENT OUT if check_closer_pose IS USED=========#
+            self.target_obj[arm_side] = self.target_obj_queue[arm_side].get()
+            #======SKIP check_closer_pose FOR VIRTUAL TESTING=======#
+
             obj = copy.deepcopy(self.target_obj[arm_side])
             pos = copy.deepcopy(obj['pos'])
-            mrk_z_axis = copy.deepcopy(obj['vector'])
-            
-            #get close + suc off
+            mrk_z_axis = copy.deepcopy(obj['vector']) #already normalized            
+         
+            #away_scale: approach?/away? mrk along z axis 
+            away_scale = 0.150 #(0.050 m = 50mm = 5cm)
+            pos_shifted_approach = pos + away_scale*mrk_z_axis
+            pos_shifted_leave = pos - away_scale*mrk_z_axis# + [0.0, 0.0, 0.05]
+            print('pos', pos)
+            print('pos_shifted_approach', pos_shifted_approach)
+            print('pos_shifted_leave', pos_shifted_leave)
+
+            #approach obj + suc off
+            cmd['state'] = State.pick
             cmd['suc_cmd'] = 'Off'
-            cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p' #line
-            cmd['pos'], cmd['euler'], cmd['phi'] = [pos[0], pos[1], pos[2]], obj['euler'], 0            
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'line' #p2p, line
+            cmd['pos'], cmd['euler'], cmd['phi'] = pos_shifted_approach , obj['euler'], 0            
             cmd_queue.put(copy.deepcopy(cmd))
             
-            #attach + suc on
+            #attach + suc on            
             cmd['suc_cmd'] = 'On'
-            cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p' #line
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'line' #p2p, line
             cmd['pos'], cmd['euler'], cmd['phi'] = pos, obj['euler'], 0       
             cmd_queue.put(copy.deepcopy(cmd))
-
-            #attach + suc on + back off
+            
+            #attach + suc on + move up back off            
             cmd['suc_cmd'] = 'On'
-            cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p' #line
-            cmd['pos'], cmd['euler'], cmd['phi'] = [pos[0], pos[1], pos[2]], obj['euler'], 0
-            cmd['state'] = State.pick
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'line' #p2p, line
+            cmd['pos'], cmd['euler'], cmd['phi'] = pos_shifted_leave, obj['euler'], 0
+            cmd_queue.put(copy.deepcopy(cmd))          
+            self.dual_arm.send_cmd(arm_side, True, cmd_queue)
+            print('left_arm.status:', self.dual_arm.left_arm.status)
+            print('right_arm.status:', self.dual_arm.right_arm.status)
+        
+        elif arm_state == State.dispose:
+            print(' ++++++++++ dispose ++++++++++ ', arm_side)
+            self.target_obj[arm_side]['name']
+
+            #disposal_box_intermediate_pose (left/right arm)
+
+            #use obj name to get dispose position
+            cmd['state'] = State.dispose
             cmd_queue.put(copy.deepcopy(cmd))
-            arm_side = self.dual_arm.send_cmd(arm_side, False, cmd_queue)
+            self.dual_arm.send_cmd(arm_side, True, cmd_queue)
+            print('left_arm.status:', self.dual_arm.left_arm.status)
+            print('right_arm.status:', self.dual_arm.right_arm.status)
+
+        elif arm_state == State.reorient:
+            print(' ++++++++++ reorient ++++++++++ ', arm_side)
+            self.target_obj[arm_side]['name']
+            self.target_obj[arm_side]['side_id']
+            
+            cmd['state'] = State.reorient
+            cmd_queue.put(copy.deepcopy(cmd))
+            self.dual_arm.send_cmd(arm_side, True, cmd_queue)
+            print('left_arm.status:', self.dual_arm.left_arm.status)
+            print('right_arm.status:', self.dual_arm.right_arm.status)
+
+        elif arm_state == State.stock:
+            print(' ++++++++++ stock ++++++++++ ', arm_side)
+            
+            self.target_obj[arm_side]['name']
+
+            #current shelf_intermediate_pose (left/right arm)
+
+            #use obj name to get dispose position
+
+            cmd['state'] = State.stock
+            cmd_queue.put(copy.deepcopy(cmd))
+            self.dual_arm.send_cmd(arm_side, True, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:', self.dual_arm.right_arm.status)
 

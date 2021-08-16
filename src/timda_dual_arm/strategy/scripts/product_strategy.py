@@ -62,53 +62,31 @@ box_pose = {'left' :[[[-0.28,  0.2, -0.25],  [0.0, -30, 0.0]]],
 tot_shelf_level = 3 #np.size(drawer_pose['left'])/6
 
 #dispose box
-dispose_pose = {'plum_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                                [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                                [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'salmon_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                                [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                                [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'sandwich':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'hamburger':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'drink':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                        [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                        [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'lunchbox':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
+dispose_pose = {'plum_riceball':    [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                'salmon_riceball':  [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                'sandwich':         [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                'hamburger':        [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                'lunchbox':         [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]
                 }
+                            
 #reorient pose
-reorient_pose = {'plum_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                                [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                                [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'salmon_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                                [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                                [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'sandwich':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'hamburger':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'drink':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                        [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                        [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                'lunchbox':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],     #shelf level 1
-                            [[0.38,  0.2, -0.25],  [0.0, 65, 0.0]],     #shelf level 2
-                            [[0.38,  0.2, -0.65],  [0.0, 65, 0.0]]],    #shelf level 3
-                }
+reorient_pose = {'plum_riceball':    [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                 'salmon_riceball':  [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                 'sandwich':         [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                 'hamburger':        [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                 'lunchbox':         [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]
+                }                           
 
 #shelf first obj pose
-shelf_pose = {  'plum_riceball':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
-                'salmon_riceball':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+shelf_pose = {  'plum_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                                [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]],
+                'salmon_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+                                  [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]],
                 'sandwich':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],  
                 'hamburger':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],                   
                 'drink':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],                   
-                'lunchbox':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]}
+                'lunchbox':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]
+            }
 
 # place_pose = [[[-0.38,  0, -0.796],[0.0, 0.0, 0.0]],
 #               [[-0.38,  0, -0.796],[0.0, 0.0, 0.0]],
@@ -573,22 +551,32 @@ class MerchandiseTask():
         
         elif arm_state == State.dispose:
             print(' ++++++++++ dispose ++++++++++ ', arm_side)
-            self.target_obj[arm_side]['name']
-
+            
             #disposal_box_intermediate_pose (left/right arm)
-
+            cmd['cmd'] = 'jointMove'            
+            cmd['jpos'] = [0, 0, -1.2, 0, 1.87, 0, -0.87, 0]
+            cmd['speed'] = 100
+            cmd_queue.put(copy.deepcopy(cmd))                      
+            
+            #put disposed product into disposal box
             #use obj name to get dispose position
+            obj_name_dispose = self.target_obj[arm_side]['name']
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'line' #p2p, line
+            cmd['pos'], cmd['euler'], cmd['phi'] = dispose_pose[obj_name_dispose]               
             cmd['state'] = State.dispose
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:', self.dual_arm.right_arm.status)
+            print(obj_name_dispose, 'disposed successfully!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
         elif arm_state == State.reorient:
             print(' ++++++++++ reorient ++++++++++ ', arm_side)
-            self.target_obj[arm_side]['name']
-            self.target_obj[arm_side]['side_id']
+            obj_name_reorient = self.target_obj[arm_side]['name']
+            reorient_method = self.target_obj[arm_side]['side_id']
             
+            #write the related transformation of the product to the correct reorientation
+
             cmd['state'] = State.reorient
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
@@ -596,14 +584,19 @@ class MerchandiseTask():
             print('right_arm.status:', self.dual_arm.right_arm.status)
 
         elif arm_state == State.stock:
-            print(' ++++++++++ stock ++++++++++ ', arm_side)
+            print(' ++++++++++ stock ++++++++++ ', arm_side)            
+            obj_name_stock = self.target_obj[arm_side]['name']
             
-            self.target_obj[arm_side]['name']
-
             #current shelf_intermediate_pose (left/right arm)
+            cmd['cmd'] = 'jointMove'            
+            cmd['jpos'] = [0, 0, -1.2, 0, 1.87, 0, -0.87, 0]
+            cmd['speed'] = 100
+            cmd_queue.put(copy.deepcopy(cmd))      
 
             #use obj name to get dispose position
-
+            #TODO: stock the product behind reoriented product!!!!
+            cmd['cmd'], cmd['mode'] = 'ikMove', 'line' #p2p, line
+            cmd['pos'], cmd['euler'], cmd['phi'] = shelf_pose[obj_name_stock]
             cmd['state'] = State.stock
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)

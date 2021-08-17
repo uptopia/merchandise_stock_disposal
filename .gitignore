@@ -1,0 +1,7 @@
+.vscode
+
+*build
+*devel
+
+CATKIN_IGNORE
+

@@ -62,7 +62,7 @@ box_pose = {'left' :[[[-0.28,  0.2, -0.25],  [0.0, -30, 0.0]]],
 tot_shelf_level = 3 #np.size(drawer_pose['left'])/6
 
 #dispose box
-dispose_pose = {'plum_riceball':    [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+dispose_pose = {'plum_riceball':    [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],  #TODO
                 'salmon_riceball':  [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
                 'sandwich':         [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
                 'hamburger':        [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
@@ -70,7 +70,7 @@ dispose_pose = {'plum_riceball':    [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
                 }
                             
 #reorient pose
-reorient_pose = {'plum_riceball':    [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+reorient_pose = {'plum_riceball':    [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],  #TODO
                  'salmon_riceball':  [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
                  'sandwich':         [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
                  'hamburger':        [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
@@ -78,7 +78,7 @@ reorient_pose = {'plum_riceball':    [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
                 }                           
 
 #shelf first obj pose
-shelf_pose = {  'plum_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
+shelf_pose = {  'plum_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],  #TODO
                                 [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]],
                 'salmon_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
                                   [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]],
@@ -237,7 +237,7 @@ class MerchandiseTask():
         if arm_state is None:
             arm_state = State.init
         elif arm_state == State.init:
-            arm_state = State.move_cam2shelf#State.open_drawer #State.move_cam2shelf#
+            arm_state = State.open_drawer #State.move_cam2shelf#
         elif arm_state == State.open_drawer:
             arm_state = State.move_cam2shelf
         elif arm_state == State.move_cam2shelf:
@@ -450,7 +450,7 @@ class MerchandiseTask():
             print('right_arm.status:',self.dual_arm.right_arm.status)
 
         elif arm_state == State.move2obj:
-            print(' ++++++++++ move2obj ++++++++++ ', arm_side)
+            print(' ++++++++++ move2obj ++++++++++ ', arm_side)            
 
             # expired(disposal) -> old(reorient) -> new(stock)
             if self.expired_queue.qsize() > 0: 
@@ -468,20 +468,25 @@ class MerchandiseTask():
             #TODO:check object_queue if fail grasp, do what??? target_obj_queue, obj_done                    
             print(obj['name'], obj['id'], obj['side_id'], obj['expired'])
 
-            cmd['state'] = State.move2obj                 
-            cmd['suc_cmd'] = 'Off'            
-            cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'            
-            pos = copy.deepcopy(obj['pos'])     #(x, y, z): base_H_mrks[0:3, 3]            
-            shift = 0.05                        #FIXME: how far should the camera be???
-            cmd['pos'], cmd['euler'], cmd['phi'] = [pos[0]+shift, pos[1]+shift, pos[2]+shift] , [0, 90, 0], 0
-            cmd_queue.put(copy.deepcopy(cmd))
+            #TODO: check if left/right out of reach
+            obj_putback = False
+            if (arm_side == 'left' and obj['pos'][1] < -0.02) or (arm_side == 'right' and obj['pos'][1] > 0.02): #y<-0.02 (2cm) too
+                obj_putback = True
+            else:
+                cmd['state'] = State.move2obj                 
+                cmd['suc_cmd'] = 'Off'            
+                cmd['cmd'], cmd['mode'] = 'ikMove', 'p2p'            
+                pos = copy.deepcopy(obj['pos'])     #(x, y, z): base_H_mrks[0:3, 3]            
+                shift = 0.05                        #FIXME: how far should the camera be???
+                cmd['pos'], cmd['euler'], cmd['phi'] = [pos[0]+shift, pos[1]+shift, pos[2]+shift] , [0, 90, 0], 0
+                cmd_queue.put(copy.deepcopy(cmd))
 
-            # cmd['cmd'], cmd['state'] = 'occupied', State.move2obj
-            cmd['cmd'] = 'occupied'
-            cmd_queue.put(copy.deepcopy(cmd))
-            arm_side = self.dual_arm.send_cmd(arm_side, True, cmd_queue)
+                # cmd['cmd'], cmd['state'] = 'occupied', State.move2obj
+                cmd['cmd'] = 'occupied'
+                cmd_queue.put(copy.deepcopy(cmd))
+                arm_side = self.dual_arm.send_cmd(arm_side, True, cmd_queue)
 
-            if arm_side == 'fail': #TODO: failed because of what???? cannot reach???
+            if (obj_putback == True) or (arm_side == 'fail'): #TODO: failed because of what???? cannot reach???
                 if obj['expired'] == 'expired':
                     self.expired_queue.put(obj)  #bcus failed so put the obj back to queue
                 elif obj['expired'] == 'old':
@@ -551,6 +556,7 @@ class MerchandiseTask():
         
         elif arm_state == State.dispose:
             print(' ++++++++++ dispose ++++++++++ ', arm_side)
+            #TODO: check if left/right out of reach
             
             #disposal_box_intermediate_pose (left/right arm)
             cmd['cmd'] = 'jointMove'            
@@ -572,6 +578,8 @@ class MerchandiseTask():
 
         elif arm_state == State.reorient:
             print(' ++++++++++ reorient ++++++++++ ', arm_side)
+            #TODO: check if left/right out of reach
+
             obj_name_reorient = self.target_obj[arm_side]['name']
             reorient_method = self.target_obj[arm_side]['side_id']
             
@@ -582,9 +590,11 @@ class MerchandiseTask():
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:', self.dual_arm.right_arm.status)
+            print(obj_name_reorient, 'reoriented successfully!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
         elif arm_state == State.stock:
-            print(' ++++++++++ stock ++++++++++ ', arm_side)            
+            print(' ++++++++++ stock ++++++++++ ', arm_side)    
+            #TODO: check if left/right out of reach        
             obj_name_stock = self.target_obj[arm_side]['name']
             
             #current shelf_intermediate_pose (left/right arm)
@@ -602,6 +612,7 @@ class MerchandiseTask():
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)
             print('left_arm.status:', self.dual_arm.left_arm.status)
             print('right_arm.status:', self.dual_arm.right_arm.status)
+            print(obj_name_stock, 'stocked successfully!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
         elif arm_state == State.place:
             print(' ++++++++++ place ++++++++++ ', arm_side)

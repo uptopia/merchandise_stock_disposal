@@ -14,11 +14,11 @@ from aruco_detection.srv import aruco_info, aruco_infoResponse
 
 class MarkerPosture():
     def __init__(self):        
-        self.cam_left_topic = '/camera/color/image_raw'
-        self.cam_info_left_topic = '/camera/color/camera_info'
+        self.cam_left_topic = '/cam_left/color/image_raw'
+        self.cam_info_left_topic = '/camera/cam_left/color/camera_info'
 
-        self.cam_right_topic = '/camera/color/image_raw'
-        self.cam_info_right_topic = '/camera/color/camera_info'
+        self.cam_right_topic = '/cam_right/color/image_raw'
+        self.cam_info_right_topic = '/cam_right/color/camera_info'
 
         # Create vectors we'll be using for rotations and translations for postures
         self.camera_info_left = CameraInfo()

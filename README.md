@@ -1,11 +1,25 @@
 # merchandise_stock_disposal
 
+
+OPEN 1 Realsense
 ```
 <terminal 1> Open Realsense D435i
 cd ~/realsense_ros
 . devel/setup.bash
 roslaunch realsense2_camera rs_rgbd.launch
+```
 
+or 
+
+OPEN 2 Realsense
+```
+cd ~/merchandise_stock_disposal
+. devel/setup.bash
+roslaunch aruco_detection open_dual_realsense.launch
+```
+
+EXECUTE Disposal and Stock Task
+```
 <terminal 2> Open TIMDA Dual Arm Gazebo
 cd ~/merchandise_stock_disposal
 . devel/setup.bash

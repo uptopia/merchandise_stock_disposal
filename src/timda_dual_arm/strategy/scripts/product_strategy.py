@@ -80,8 +80,10 @@ reorient_pose = {'plum_riceball':    [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],  #TO
 #shelf first obj pose
 shelf_pose = {  'plum_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],  #TODO
                                 [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]],
+                'plum_cnt' : 0,
                 'salmon_riceball':[[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],
                                   [[0.38,  0.2, 0.15],  [0.0, 65, 0.0]]],
+                'salmon_cnt' : 0,
                 'sandwich':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],  
                 'hamburger':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],                   
                 'drink':[[0.38,  0.2, 0.15],  [0.0, 65, 0.0]],                   
@@ -605,8 +607,24 @@ class MerchandiseTask():
 
             #use obj name to get dispose position
             #TODO: stock the product behind reoriented product!!!!
+            new_pose = []
+            if(obj_name_stock == 'plum_riceball'):
+                #stock 2 times
+                new_pose = shelf_pose[obj_name_stock][shelf_pose['plum_cnt']]
+                shelf_pose['plum_cnt'] += 1
+            elif(obj_name_stock == 'salmon_riceball'):
+                #stock 2 times
+                new_pose = shelf_pose[obj_name_stock][shelf_pose['salmon_cnt']]
+                shelf_pose['salmon_cnt'] += 1
+            elif(obj_name_stock == 'lunchbox'):
+                #put UNDER the reoriented obj
+                new_pose = shelf_pose[obj_name_stock]
+            else:
+                #just put behind the reoriented obj
+                new_pose = shelf_pose[obj_name_stock]
+
             cmd['cmd'], cmd['mode'] = 'ikMove', 'line' #p2p, line
-            cmd['pos'], cmd['euler'], cmd['phi'] = shelf_pose[obj_name_stock]
+            cmd['pos'], cmd['euler'], cmd['phi'] = new_pose
             cmd['state'] = State.stock
             cmd_queue.put(copy.deepcopy(cmd))
             self.dual_arm.send_cmd(arm_side, True, cmd_queue)

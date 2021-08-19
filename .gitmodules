@@ -1,0 +1,12 @@
+[submodule "ArucoMark"]
+	path = ArucoMark
+	url = https://github.com/andy-Chien/ArucoMark.git
+[submodule "timda_dual_arm"]
+	path = timda_dual_arm
+	url = https://github.com/tku-iarc/timda_dual_arm.git
+[submodule "src/ArucoMark"]
+	path = src/ArucoMark
+	url = https://github.com/andy-Chien/ArucoMark.git
+[submodule "src/timda_dual_arm"]
+	path = src/timda_dual_arm
+	url = https://github.com/tku-iarc/timda_dual_arm.git

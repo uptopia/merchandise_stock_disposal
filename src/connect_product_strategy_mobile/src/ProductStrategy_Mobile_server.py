@@ -4,7 +4,7 @@ ROS Service SERVER
 '''
 
 import rospy
-from timda_dual_arm.srv import TimdaMode_info, TimdaMode_infoResponse
+from connect_product_strategy_mobile.srv import TimdaMode_info, TimdaMode_infoResponse
 
 TIMDA_SERVER = 'mobile_state'
 class TIMDA_MobileState():

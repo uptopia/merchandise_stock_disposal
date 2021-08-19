@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
-import rospy
+import rospy, rospkg
 import numpy as np
 
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Image
+
+import ConfigParser
 
 import cv2
 import cv2.aruco as aruco
@@ -14,15 +16,37 @@ from aruco_detection.srv import aruco_info, aruco_infoResponse
 
 class MarkerPosture():
     def __init__(self):        
-        self.cam_left_topic = '/cam_left/color/image_raw'
-        self.cam_info_left_topic = '/camera/cam_left/color/camera_info'
-
-        self.cam_right_topic = '/cam_right/color/image_raw'
+        self.cam_info_left_topic = '/cam_left/color/camera_info'
         self.cam_info_right_topic = '/cam_right/color/camera_info'
+        self.cam_left_topic = '/cam_left/color/image_raw'       
+        self.cam_right_topic = '/cam_right/color/image_raw'
+
+        # Camera intrinsic parameters
+        self.use_self_calib_intrinsic_param = True
+        if(self.use_self_calib_intrinsic_param == True):
+            # Read from calib data
+            rospack = rospkg.RosPack()
+            self.curr_path = rospack.get_path('ArucoMarkerPosture')
+            
+            self.frameId = 0
+            self.width = 1920
+            self.height = 1080
+            self.camera_id_left = 3
+            self.camera_id_right = 8
+            self.camera_info_path_left = self.curr_path + '/config/camera_' + str(self.camera_id_left) + '_internal.ini'
+            self.camera_info_path_right = self.curr_path + '/config/camera_' + str(self.camera_id_right) + '_internal.ini'
+        else:
+            # Use realsense data            
+            self.camera_info_left = CameraInfo()
+            self.camera_info_right = CameraInfo()
+            self.sub_camera_info_left = rospy.Subscriber(self.cam_info_left_topic, CameraInfo, self.get_camera_info_left)        
+            self.sub_camera_info_right = rospy.Subscriber(self.cam_info_right_topic, CameraInfo, self.get_camera_info_right)
+        
+        self.cam_left_topic = '/cam_left/color/image_raw'       
+        self.cam_right_topic = '/cam_right/color/image_raw'
 
         # Create vectors we'll be using for rotations and translations for postures
-        self.camera_info_left = CameraInfo()
-        self.camera_info_right = CameraInfo()
+       
         self.img_color_left = []
         self.img_gray_left = []
         self.img_color_right = []
@@ -32,10 +56,8 @@ class MarkerPosture():
         self.corners = None
         self.rvecs = None 
         self.tvecs = None
-
-        self.sub_camera_info_left = rospy.Subscriber(self.cam_info_left_topic, CameraInfo, self.get_camera_info_left)
+        
         self.sub_markers_left = rospy.Subscriber(self.cam_left_topic, Image, self.stream_img_left)
-        self.sub_camera_info_right = rospy.Subscriber(self.cam_info_right_topic, CameraInfo, self.get_camera_info_right)
         self.sub_markers_right = rospy.Subscriber(self.cam_right_topic, Image, self.stream_img_right)
 
         #initiate ros server
@@ -49,11 +71,18 @@ class MarkerPosture():
         print("Stream {} hand camera!". format(req.side_cmd))
         
         if req.side_cmd == 'left':
-            self.height, self.width, self.frame_id, self.intrinsic_matrix, self.distortion_coeff = self.get_camera_info(self.camera_info_left)
+            if(self.use_self_calib_intrinsic_param == True):
+                self.height, self.width, self.frame_id, self.intrinsic_matrix, self.distortion_coeff = self.get_camera_info_calib_data(self.camera_info_path_left, self.width, self.height)
+            else:
+                self.height, self.width, self.frame_id, self.intrinsic_matrix, self.distortion_coeff = self.get_camera_info(self.camera_info_left)
             self.ids, self.corners, self.rvecs, self.tvecs = self.detect_aruco_markers(self.img_color_left, self.img_gray_left)            
             print('Streaming LEFT camera...')
         else:
-            self.height, self.width, self.frame_id, self.intrinsic_matrix, self.distortion_coeff = self.get_camera_info(self.camera_info_right)
+            if(self.use_self_calib_intrinsic_param == True):
+                self.height, self.width, self.frame_id, self.intrinsic_matrix, self.distortion_coeff = self.get_camera_info_calib_data(self.camera_info_path_right, self.width, self.height)
+            else:
+                self.height, self.width, self.frame_id, self.intrinsic_matrix, self.distortion_coeff = self.get_camera_info(self.camera_info_right)
+            
             self.ids, self.corners, self.rvecs, self.tvecs = self.detect_aruco_markers(self.img_color_right, self.img_gray_right)            
             print('Streaming RIGHT camera...')
             
@@ -98,10 +127,10 @@ class MarkerPosture():
         return res
 
     def stream_img_left(self, data):        
-        self.img_color_left, self.img_gray_left = self.data2cvimg(data)      
+        self.img_color_left, self.img_gray_left = self.data2cvimg(data)
     
     def stream_img_right(self, data):        
-        self.img_color_right, self.img_gray_right = self.data2cvimg(data)        
+        self.img_color_right, self.img_gray_right = self.data2cvimg(data)
 
     def data2cvimg(self, data):        
         bridge = CvBridge()
@@ -112,6 +141,35 @@ class MarkerPosture():
             print('CvBridgeError:', e)
             return
         return img_color, img_gray
+
+    def get_camera_info_calib_data(self, camera_info_path, color_width, color_height):
+            config = ConfigParser.ConfigParser()
+            config.optionxform = str            
+            config.read(camera_info_path)
+
+            internal_name = 'Internal_' + str(color_width) + '_' + str(color_height)
+            b00 = float(config.get(internal_name, "Key_1_1"))
+            b01 = float(config.get(internal_name, "Key_1_2"))
+            b02 = float(config.get(internal_name, "Key_1_3"))
+            b10 = float(config.get(internal_name, "Key_2_1"))
+            b11 = float(config.get(internal_name, "Key_2_2"))
+            b12 = float(config.get(internal_name, "Key_2_3"))
+            b20 = float(config.get(internal_name, "Key_3_1"))
+            b21 = float(config.get(internal_name, "Key_3_2"))
+            b22 = float(config.get(internal_name, "Key_3_3"))
+
+            self.intrinsic_matrix = np.mat([[b00, b01, b02],
+                                            [b10, b11, b12],
+                                            [b20, b21, b22]])
+
+            distcoeff_name = 'DistCoeffs_' + str(color_width) + '_' + str(color_height)
+            k_1 = float(config.get(distcoeff_name, "K_1"))
+            k_2 = float(config.get(distcoeff_name, "K_2"))
+            p_1 = float(config.get(distcoeff_name, "K_3"))
+            p_2 = float(config.get(distcoeff_name, "p_1"))
+            k_3 = float(config.get(distcoeff_name, "p_2"))   
+
+            self.distortion_coeff = np.array([k_1, k_2, p_1, p_2, k_3]) #self.distCoeffs = np.array([0.0, 0, 0, 0, 0])            
 
     def get_camera_info(self, camera_info):
         height = camera_info.height

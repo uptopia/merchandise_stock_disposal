@@ -4,13 +4,13 @@ ROS Service SERVER
 '''
 
 import rospy
-from connect_product_strategy_mobile.srv import TimdaMode_info, TimdaMode_infoResponse
+from connect_product_strategy_mobile.srv import TimdaMode, TimdaModeResponse
 
 TIMDA_SERVER = 'mobile_state'
 class TIMDA_MobileState():
     def __init__(self):
         #initiate ros server
-        self.server = rospy.Service(TIMDA_SERVER, TimdaMode_info, self.stream_mobile_state)
+        self.server = rospy.Service(TIMDA_SERVER, TimdaMode, self.stream_mobile_state)
         print('TIMDA_MobileState initiated. wait for client request')
 
     def stream_mobile_state(self, req):
@@ -19,7 +19,7 @@ class TIMDA_MobileState():
         print("Client Request to move to Place {}". format(req.item_req))
                          
         # Server RESPONSE
-        res = TimdaMode_infoResponse()
+        res = TimdaModeResponse()
         if req.item_req == 'Home':
             print('Home Reached')
             res.nav_res = 'finish' # response 'finish' when TIMDA mobile arrived at the navigation place

@@ -6,14 +6,14 @@ ROS Service CLIENT
 
 import sys
 import rospy
-from timda_dual_arm.srv import TimdaMode_info, TimdaMode_infoResponse
+from connect_product_strategy_mobile.srv import TimdaMode, TimdaModeResponse
 
 TIMDA_SERVER = 'mobile_state'
 def pass_esp8266_info_to_server(data):
     rospy.wait_for_service(TIMDA_SERVER)
     
     try:        
-        req = rospy.ServiceProxy(TIMDA_SERVER, TimdaMode_info)
+        req = rospy.ServiceProxy(TIMDA_SERVER, TimdaMode)
         res = req(data)
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)

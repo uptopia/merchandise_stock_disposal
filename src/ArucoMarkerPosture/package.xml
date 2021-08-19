@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>aruco_detection</name>
+  <name>ArucoMarkerPosture</name>
   <version>0.0.0</version>
-  <description>The aruco_detection package</description>
+  <description>The ArucoMarkerPosture package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

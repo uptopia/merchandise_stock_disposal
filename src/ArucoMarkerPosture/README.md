@@ -1,4 +1,9 @@
 # ArucoMarkerPosture
+### Experiment Setting (left, right camera, ArUco markers)
+![Experiment Setting](img/ArucoMarkerPosture_exp_setting.jpg)
+
+### Left, Right Camera ArUco marker detection result
+![Detect Result](img/ArucoMarkerPosture_detect_result.png)
 
 ## OPEN 2 Realsense <terminal 1>
 self.use_self_calib_intrinsic_param =  

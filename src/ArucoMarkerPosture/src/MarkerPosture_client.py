@@ -2,7 +2,7 @@
 
 import sys
 import rospy
-from aruco_detection.srv import aruco_info, aruco_infoResponse
+from ArucoMarkerPosture.srv import aruco_info, aruco_infoResponse
 
 def get_ar_marker(side):
     rospy.wait_for_service('get_ar_marker')

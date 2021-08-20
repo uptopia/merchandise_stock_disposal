@@ -12,7 +12,8 @@ import cv2
 import cv2.aruco as aruco
 from cv_bridge import CvBridge, CvBridgeError
 
-from aruco_detection.srv import aruco_info, aruco_infoResponse
+from ArucoMarkerPosture.srv import aruco_info, aruco_infoResponse
+
 
 class MarkerPosture():
     def __init__(self):        
@@ -72,23 +73,22 @@ class MarkerPosture():
         img_color = np.zeros((540, 960))
 
 
-        cv2.namedWindow('img_color', cv2.WINDOW_NORMAL)
-        cv2.imshow('img_color', img_color)
-        cv2.resizeWindow('img_color', 960, 540)
-        cv2.moveWindow('img_color', 100, 100)
+        # cv2.namedWindow('img_color', cv2.WINDOW_NORMAL)
+        # cv2.imshow('img_color', img_color)
+        # cv2.resizeWindow('img_color', 960, 540)
+        # cv2.moveWindow('img_color', 100, 100)
+        # cv2.waitKey()
+
+        cv2.namedWindow(self.windowname_left, cv2.WINDOW_NORMAL)
+        cv2.imshow(self.windowname_left, img_color)
+        cv2.resizeWindow(self.windowname_left, 480, 270)
+        cv2.moveWindow(self.windowname_left, 100, 100)       
+
+        cv2.namedWindow(self.windowname_right, cv2.WINDOW_NORMAL)
+        cv2.imshow(self.windowname_right, img_color)
+        cv2.resizeWindow(self.windowname_right, 480, 270)
+        cv2.moveWindow(self.windowname_right, 500, 100)
         cv2.waitKey()
-
-        # cv2.namedWindow(self.windowname_left, cv2.WINDOW_NORMAL)
-        # cv2.imshow(self.windowname_left, img_color)
-        # cv2.resizeWindow(self.windowname_left, 960, 540)
-        # cv2.moveWindow(self.windowname_left, 100, 100)
-        # cv2.waitKey()
-
-        # cv2.namedWindow(self.windowname_right, cv2.WINDOW_NORMAL)
-        # cv2.imshow(self.windowname_right, img_color)
-        # cv2.resizeWindow(self.windowname_right, 960, 540)
-        # cv2.moveWindow(self.windowname_right, 500, 100)
-        # cv2.waitKey()
         
         self.sub_markers_left = rospy.Subscriber(self.cam_left_topic, Image, self.stream_img_left)
         self.sub_markers_right = rospy.Subscriber(self.cam_right_topic, Image, self.stream_img_right)
@@ -200,12 +200,12 @@ class MarkerPosture():
         distcoeff_name = 'DistCoeffs_' + str(color_width) + '_' + str(color_height)
         k_1 = float(config.get(distcoeff_name, "K_1"))
         k_2 = float(config.get(distcoeff_name, "K_2"))
-        p_1 = float(config.get(distcoeff_name, "K_3"))
-        p_2 = float(config.get(distcoeff_name, "p_1"))
-        k_3 = float(config.get(distcoeff_name, "p_2"))   
+        k_3 = float(config.get(distcoeff_name, "K_3"))
+        p_1 = float(config.get(distcoeff_name, "p_1"))
+        p_2 = float(config.get(distcoeff_name, "p_2"))   
 
         distortion_coeff = np.array([k_1, k_2, p_1, p_2, k_3]) 
-        #distortion_coeff = np.array([0.0, 0, 0, 0, 0])
+        # distortion_coeff = np.array([0.0, 0, 0, 0, 0])
 
         return intrinsic_matrix, distortion_coeff         
 
@@ -228,7 +228,7 @@ class MarkerPosture():
     def detect_aruco_markers(self, img_color, img_gray, windowname):
         
         # Constant parameters used in Aruco methods
-        markerLength = 0.019 #0.020
+        markerLength = 0.018 #0.020
         axisLength = 0.010
         ARUCO_PARAMETERS = aruco.DetectorParameters_create()
         # ARUCO_PARAMETERS.adaptiveThreshConstant = 10
@@ -263,9 +263,11 @@ class MarkerPosture():
         else:
             # code to show 'No Ids' when no markers are found
             cv2.putText(img_color, "No Ids", (10,30), font, 1, (0,0,255), 2, cv2.LINE_AA)
-
-        cv2.imshow('img_color', img_color)
+       
+        # cv2.imshow('img_color', img_color)
+        cv2.imshow(windowname, img_color)
         cv2.waitKey(1)
+        print('!!!!!!!!!!!!!!!!!!!image updated')
 
         return self.ids, self.corners, self.rvecs, self.tvecs    
 

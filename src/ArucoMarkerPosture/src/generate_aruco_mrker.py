@@ -40,7 +40,12 @@ ARUCO_DICT = aruco.Dictionary_get(aruco.DICT_5X5_250)
 #             #lunchbox(2)
 #             180, 181,
 #             190, 191,
-#             200, 201]
+#             200, 201,
+#             
+#             #shelf 
+#             210, 211,
+#             220, 221
+#             230, 231]
 
 
 
@@ -60,7 +65,7 @@ if __name__ == '__main__':
     # # 1 point = 0.352777778 mm
 
     markerID = []
-    for i in range(1, 21):        
+    for i in range(13, 26):        #(1,13)(13, 26)
         for j in range(0, 5):
             # print(i*10+j)
             markerID.append(i*10+j)
@@ -69,7 +74,8 @@ if __name__ == '__main__':
    
        
     nx = 10
-    ny = len(markerID)/nx
+    ny = int(len(markerID)/nx)
+    print(nx, ny)
 
     fig = plt.figure()
     for i in range(1, nx*ny+1):        
@@ -78,6 +84,6 @@ if __name__ == '__main__':
         plt.imshow(img, cmap = mpl.cm.gray, interpolation = "nearest")
         ax.axis("off")
 
-    plt.savefig("markers.pdf")
+    plt.savefig("markersB1.pdf")
     # plt.savefig("markers.png")
     plt.show()

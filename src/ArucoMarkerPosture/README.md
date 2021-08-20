@@ -1,18 +1,37 @@
-## Overview
+# ArucoMarkerPosture
 
-The code in this project is an example and test of using Aruco marker and Gridboard detection in a video stream, then creating board posture (an estimation of 3D space as constructed from a 2D video)
+## OPEN 2 Realsense <terminal 1>
+self.use_self_calib_intrinsic_param =  
+[True] use calibrated intrinsic parameters (/config/***.ini)  
+[False] use intrinsic parameters from Realsense D435i  
 
-Similarly, the same example is provided for Charuco board detection and posturing.
+```
+cd ~/merchandise_stock_disposal
+. devel/setup.bash
+roslaunch ArucoMarkerPosture open_dual_realsense.launch
+```
 
-Camera calibration is required, for an example of that check the calibration examplese in this repository.
+# TEST aruco_info service
+## ROS Server <terminal 2> 
+```
+cd ~/merchandise_stock_disposal
+. devel/setup.bash
+chmod +x src/ArucoMarkerPosture/src/MarkerPosture.py
+rosrun ArucoMarkerPosture MarkerPosture.py
+```
 
-## Systems
+## ROS Client <terminal 3> 
+```
+cd ~/merchandise_stock_disposal
+. devel/setup.bash
+chmod +x src/ArucoMarkerPosture/src/MarkerPosture_client.py
 
-This code in this project was tested on the following systems:
- - Linux Debian dist
-   - Linux Mint 18.1 Cinnamon 64-bit
-   - Python 2.7 with OpenCV 3.2.0
- - MacBook Air
-   - macOS Sierra 10.12.4
-   - Python 2.7 with OpenCV 3.2.0
- 
+(1) Test1: if forget to request side
+rosrun ArucoMarkerPosture MarkerPosture_client.py
+
+(2) Test2: request [left] camera
+rosrun ArucoMarkerPosture MarkerPosture_client.py left
+
+(3) Test3: request [right] camera
+rosrun ArucoMarkerPosture MarkerPosture_client.py right
+```

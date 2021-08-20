@@ -20,7 +20,7 @@ class TIMDA_MobileState():
                          
         # Server RESPONSE
         res = TimdaModeResponse()
-        if req.item_req == 'Home':
+        if req.item_req == 'initial':
             print('Home Reached')
             res.nav_res = 'finish' # response 'finish' when TIMDA mobile arrived at the navigation place
         
@@ -34,6 +34,10 @@ class TIMDA_MobileState():
             
         elif req.item_req == 'Shelf':
             print('Shelf Reached')
+            res.nav_res = 'finish'
+
+        elif req.item_req == 'Shelf_back':
+            print('Shelf_back Reached')
             res.nav_res = 'finish'
         
         else:

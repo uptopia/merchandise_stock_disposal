@@ -87,7 +87,7 @@ class MarkerPosture():
         cv2.namedWindow(self.windowname_right, cv2.WINDOW_NORMAL)
         cv2.imshow(self.windowname_right, img_color)
         cv2.resizeWindow(self.windowname_right, 480, 270)
-        cv2.moveWindow(self.windowname_right, 500, 100)
+        cv2.moveWindow(self.windowname_right, 600, 100)
         cv2.waitKey()
         
         self.sub_markers_left = rospy.Subscriber(self.cam_left_topic, Image, self.stream_img_left)

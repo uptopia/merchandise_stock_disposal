@@ -21,7 +21,7 @@ def pass_esp8266_info_to_server(data):
     return res    
 
 def usage():
-    return "%s [move2place_cmd]:Home, Table1, Table2, Shelf"%sys.argv[0]
+    return "%s [move2place_cmd]:initial, Table1, Table2, Shelf_back, Shelf_left, Shelf_right"%sys.argv[0]
 
 if __name__ == "__main__":
     if len(sys.argv) == 2:

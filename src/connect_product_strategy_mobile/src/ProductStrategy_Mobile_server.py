@@ -40,6 +40,14 @@ class TIMDA_MobileState():
             print('Shelf_back Reached')
             res.nav_res = 'finish'
         
+        elif req.item_req == 'Shelf_left':
+            print('Shelf_left Reached')
+            res.nav_res = 'finish'
+
+        elif req.item_req == 'Shelf_rigth':
+            print('Shelf_right Reached')
+            res.nav_res = 'finish'
+
         else:
             res.nav_res = 'ERROR Unknown navigation place'
 

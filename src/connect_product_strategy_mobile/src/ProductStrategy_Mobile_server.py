@@ -44,7 +44,7 @@ class TIMDA_MobileState():
             print('Shelf_left Reached')
             res.nav_res = 'finish'
 
-        elif req.item_req == 'Shelf_rigth':
+        elif req.item_req == 'Shelf_right':
             print('Shelf_right Reached')
             res.nav_res = 'finish'
 

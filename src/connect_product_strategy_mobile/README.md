@@ -1,7 +1,12 @@
 # connect_product_strategy_mobile
 
+## STEP 1
+```
+roscore
+```
 
-## ROS Server <terminal 1> 
+
+## STEP2: ROS Server <terminal 1> 
 ```
 cd ~/merchandise_stock_disposal
 . devel/setup.bash
@@ -10,8 +15,8 @@ chmod +x src/connect_product_strategy_mobile/src/ProductStrategy_Mobile_server.p
 rosrun connect_product_strategy_mobile ProductStrategy_Mobile_server.py
 ```
 
-# [Test1] Client (Arm) send request destination to Server (Mobile) 
-## ROS Client <terminal 2> 
+## STEP3: ROS Client <terminal 2> 
+## [Test1] Client (Arm) send request destination to Server (Mobile) 
 ```
 cd ~/merchandise_stock_disposal
 . devel/setup.bash
@@ -28,8 +33,9 @@ rosrun connect_product_strategy_mobile ProductStrategy_Mobile_server.py Home
 
 ```
 
-# [Test2] People Alert + Client (Arm) send request destination to Server (Mobile)
-## ROS Client <terminal 2> 
+or 
+
+## [Test2] People Alert + Client (Arm) send request destination to Server (Mobile)
 ```
 cd ~/merchandise_stock_disposal
 . devel/setup.bash

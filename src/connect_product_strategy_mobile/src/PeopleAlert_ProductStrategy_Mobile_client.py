@@ -11,9 +11,9 @@ from connect_product_strategy_mobile.msg import depth_alert
 
 class ArmMobileTimdaConnection:
     def __init__(self):
-        self.TIMDA_SERVER = 'mobile_state'
+        self.TIMDA_SERVER = '/Timda_mobile'
 
-        self.sub_alert_level = rospy.Subscriber('alert_level', depth_alert, self.timda_reaction)
+        self.sub_alert_level = rospy.Subscriber('alert_level', depth_alert, self.timda_reaction)        
 
     def pass_esp8266_info_to_server(self, data):
         rospy.wait_for_service(self.TIMDA_SERVER)
@@ -36,7 +36,8 @@ class ArmMobileTimdaConnection:
             # (person_detected < 1 m) & (time_last > 3 sec)
             # arm: STOP; mobile: X
             print('depth_alert: [level 2] (person_detected < 1 m) & (time_last > 3 sec)')
-            self.pass_esp8266_info_to_server('Shelf_back')  #('Shelf_left', 'Shelf_right')            
+            Shelf_back_done = self.pass_esp8266_info_to_server('shelf_back')  #('Shelf_left', 'Shelf_right')            
+            print('mobile arrive [Shelf_back] done ? {}'.format(Shelf_back_done))
 
         elif(depth_alert == 0):
             # person_detected
@@ -60,12 +61,15 @@ if __name__ == "__main__":
     print('mobile arrive [initial] done ? {}'.format(initial_done))
 
     print("Arm requesting move to [Shelf]")
-    shelf_done = amtc.pass_esp8266_info_to_server('Shelf')
+    shelf_done = amtc.pass_esp8266_info_to_server('shelf')
     print('mobile arrive [Shelf] done ? {}'.format(shelf_done))
 
     amtc.timda_reaction(0)
     amtc.timda_reaction(1)
     amtc.timda_reaction(2)
+
+    shelf_done = amtc.pass_esp8266_info_to_server('shelf')
+    print('mobile arrive [Shelf] done ? {}'.format(shelf_done))
 
     print("Arm requesting move to [initial]")
     initial_done = amtc.pass_esp8266_info_to_server('initial')

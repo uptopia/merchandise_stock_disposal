@@ -40,9 +40,9 @@ class ArmMobileTimdaConnection:
             print('mobile arrive [Shelf_back] done ? {}'.format(Shelf_back_done))
 
         elif(depth_alert == 0):
-            # person_detected
+            # (no people) or (person_detected > 1 m)
             # arm: X; mobile: X
-            print('depth_alert: [level 0] person_detected ')
+            print('depth_alert: [level 0] person_detected ')        
     
 def usage():
     return "%s [move2place_cmd]:initial, Table1, Table2, Shelf_back, Shelf_left, Shelf_right"%sys.argv[0]

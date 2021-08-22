@@ -10,6 +10,7 @@ chmod +x src/connect_product_strategy_mobile/src/ProductStrategy_Mobile_server.p
 rosrun connect_product_strategy_mobile ProductStrategy_Mobile_server.py
 ```
 
+# [Test1] Client (Arm) send request destination to Server (Mobile) 
 ## ROS Client <terminal 2> 
 ```
 cd ~/merchandise_stock_disposal
@@ -26,3 +27,14 @@ rosrun connect_product_strategy_mobile ProductStrategy_Mobile_server.py Bathroom
 rosrun connect_product_strategy_mobile ProductStrategy_Mobile_server.py Home
 
 ```
+
+# [Test2] People Alert + Client (Arm) send request destination to Server (Mobile)
+## ROS Client <terminal 2> 
+```
+cd ~/merchandise_stock_disposal
+. devel/setup.bash
+chmod +x src/connect_product_strategy_mobile/src/PeopleAlert_ProductStrategy_Mobile_client.py
+
+rosrun connect_product_strategy_mobile PeopleAlert_ProductStrategy_Mobile_client.py
+```
+** check output in terminal1 & terminal2

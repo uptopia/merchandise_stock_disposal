@@ -15,7 +15,6 @@ class ArmMobileTimdaConnection:
 
         self.sub_alert_level = rospy.Subscriber('alert_level', depth_alert, self.timda_reaction)
 
-
     def pass_esp8266_info_to_server(self, data):
         rospy.wait_for_service(self.TIMDA_SERVER)
         
@@ -37,9 +36,7 @@ class ArmMobileTimdaConnection:
             # (person_detected < 1 m) & (time_last > 3 sec)
             # arm: STOP; mobile: X
             print('depth_alert: [level 2] (person_detected < 1 m) & (time_last > 3 sec)')
-            self.pass_esp8266_info_to_server('Shelf_back')
-            # self.pass_esp8266_info_to_server('Shelf_left')
-            # self.pass_esp8266_info_to_server('Shelf_right')
+            self.pass_esp8266_info_to_server('Shelf_back')  #('Shelf_left', 'Shelf_right')            
 
         elif(depth_alert == 0):
             # person_detected
@@ -66,18 +63,13 @@ if __name__ == "__main__":
     shelf_done = amtc.pass_esp8266_info_to_server('Shelf')
     print('mobile arrive [Shelf] done ? {}'.format(shelf_done))
 
-    rospy.spin()
+    amtc.timda_reaction(0)
+    amtc.timda_reaction(1)
+    amtc.timda_reaction(2)
 
+    print("Arm requesting move to [initial]")
+    initial_done = amtc.pass_esp8266_info_to_server('initial')
+    print('mobile arrive [initial] done ? {}'.format(initial_done))
 
-
-
-    if len(sys.argv) == 2:
-        move2place_cmd = sys.argv[1]
-    else:
-        print(usage())
-        sys.exit(1)
-
-    print("Client Requesting move to %s"%(move2place_cmd))
-    server_response = pass_esp8266_info_to_server(move2place_cmd)
-    print('Request TIMDA mobile to move to %s,\nTIMDA mobile moved to request place? \t%s'%(move2place_cmd, server_response.nav_res))
+    rospy.spin()   
     

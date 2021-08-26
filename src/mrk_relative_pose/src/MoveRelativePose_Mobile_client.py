@@ -15,19 +15,20 @@ def pass_esp8266_info_to_server_relative_pose(x_length, y_length, theta):
     try:        
         req = rospy.ServiceProxy(TIMDA_SERVER_relative_pose, aruco_relative_pose)
         res = req(x_length, y_length, theta)
+        return res
+        
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
-
-    return res    
 
 def usage():
     return "%s\n [move2relative place]:(x_length, y_length, theta)"%sys.argv[0]
 
 if __name__ == "__main__":
     if len(sys.argv) == 4:
-        x_length = sys.argv[1]
-        y_length = sys.argv[2]
-        theta = sys.argv[3]
+        x_length = float(sys.argv[1])
+        y_length = float(sys.argv[2])
+        theta = float(sys.argv[3])
+        print(x_length, y_length, theta)
     else:
         print(usage())
         sys.exit(1)

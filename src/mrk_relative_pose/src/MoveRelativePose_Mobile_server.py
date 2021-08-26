@@ -21,8 +21,8 @@ class TIMDA_MobileMoveRelativePoseState():
                          
         # Server RESPONSE
         res = aruco_relative_poseResponse()
-        res.nav_done_res = mobile_move(req.x_length, req.y_length, req.theta)
-        print('res.nav_done = ', res.nav_done)
+        res.nav_done_res = self.mobile_move(req.x_length, req.y_length, req.theta)
+        print('res.nav_done = ', res.nav_done_res)
         return res
     
     def mobile_move(self, x_length, y_length, theta):
